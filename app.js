@@ -40,13 +40,16 @@
 
   const els = {};
 
-  document.addEventListener("DOMContentLoaded", init);
+  document.addEventListener("DOMContentLoaded", () => {
+    init().catch(handleFatalError);
+  });
 
   async function init() {
     bindElements();
     bindEvents();
     loadLocalState();
     await configureSupabase();
+    renderSession();
     await loadCountries();
     await loadGames();
     await loadGuesses();
@@ -55,8 +58,7 @@
 
   function bindElements() {
     const ids = [
-      "connectionStatus", "sessionBadge", "authForm", "authName", "authInvite",
-      "profileForm", "profileName", "signOutButton",
+      "connectionStatus", "authForm", "authName", "authInvite", "signOutButton",
       "totalGames", "savedGuesses", "openGames", "finishedGames", "nextGame",
       "fixtureSource", "phaseFilter", "statusFilter", "gamesList",
       "rankingList", "adminTab", "adminGamesList", "toast"
@@ -72,21 +74,28 @@
       button.addEventListener("click", () => activateView(button.dataset.view));
     });
 
-    els.profileForm.addEventListener("submit", handleProfileSave);
-    els.authForm.addEventListener("submit", handleAuthSubmit);
-    els.signOutButton.addEventListener("click", handleSignOut);
-    els.phaseFilter.addEventListener("change", () => {
+    els.authForm?.addEventListener("submit", handleAuthSubmit);
+    els.signOutButton?.addEventListener("click", handleSignOut);
+    els.phaseFilter?.addEventListener("change", () => {
       state.filters.phase = els.phaseFilter.value;
       renderGames();
     });
-    els.statusFilter.addEventListener("change", () => {
+    els.statusFilter?.addEventListener("change", () => {
       state.filters.status = els.statusFilter.value;
       renderGames();
     });
 
-    els.gamesList.addEventListener("submit", handleGuessSubmit);
-    els.gamesList.addEventListener("click", handleGamesListClick);
-    els.adminGamesList.addEventListener("submit", handleResultSubmit);
+    els.gamesList?.addEventListener("submit", handleGuessSubmit);
+    els.gamesList?.addEventListener("click", handleGamesListClick);
+    els.adminGamesList?.addEventListener("submit", handleResultSubmit);
+  }
+
+  function handleFatalError(error) {
+    console.error(error);
+    if (els.connectionStatus) {
+      els.connectionStatus.textContent = "Erro ao carregar. Atualize a página.";
+    }
+    showToast("Erro ao carregar o bolão.");
   }
 
   function activateView(viewName) {
@@ -282,19 +291,17 @@
     const isSupabase = state.mode === "supabase";
     const isLinked = Boolean(state.session && state.profile.id);
 
-    els.sessionBadge.textContent = isSupabase ? "Supabase" : "Local";
-    els.sessionBadge.classList.toggle("badge-warning", !isSupabase);
-    els.connectionStatus.textContent = isSupabase
-      ? (isLinked ? `Conectado como ${state.profile.name}` : "Entre com o convite")
-      : "Modo local sem banco";
+    if (els.connectionStatus) {
+      els.connectionStatus.textContent = isSupabase
+        ? (isLinked ? `Conectado como ${state.profile.name}` : "Entre com o convite")
+        : "Modo local sem banco";
+    }
 
-    els.authForm.hidden = !isSupabase || isLinked;
-    els.profileForm.hidden = isSupabase;
-    els.signOutButton.hidden = !isSupabase || !isLinked;
-    els.adminTab.hidden = !(isSupabase && state.profile.isAdmin);
-    els.profileName.value = state.profile.name || "";
+    if (els.authForm) els.authForm.hidden = !isSupabase || isLinked;
+    if (els.signOutButton) els.signOutButton.hidden = !isSupabase || !isLinked;
+    if (els.adminTab) els.adminTab.hidden = !(isSupabase && state.profile.isAdmin);
 
-    if (els.adminTab.hidden && document.getElementById("view-admin")?.classList.contains("is-active")) {
+    if (els.adminTab?.hidden && document.getElementById("view-admin")?.classList.contains("is-active")) {
       activateView("palpites");
     }
   }
@@ -455,7 +462,7 @@
 
   function cardNote(game, status) {
     if (!canUseProfile()) {
-      return state.mode === "supabase" ? "Entre com o convite." : "Salve seu perfil.";
+      return "";
     }
     if (status === "finalizado") {
       return "Palpites liberados.";
@@ -602,22 +609,6 @@
     });
   }
 
-  async function handleProfileSave(event) {
-    event.preventDefault();
-    const name = els.profileName.value.trim();
-
-    if (!name) {
-      showToast("Informe seu nome.");
-      return;
-    }
-
-    state.profile = { id: "local", name, isAdmin: false };
-    saveLocalState();
-    await loadGuesses();
-    render();
-    showToast("Perfil salvo.");
-  }
-
   async function handleAuthSubmit(event) {
     event.preventDefault();
     const name = els.authName.value.trim();
@@ -714,7 +705,7 @@
     }
 
     if (!canUseProfile()) {
-      showToast(state.mode === "supabase" ? "Entre com o convite." : "Salve seu perfil.");
+      showToast("Entre com o convite.");
       return;
     }
 
