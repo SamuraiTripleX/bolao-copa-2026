@@ -534,13 +534,18 @@
           <span class="label-open">Ocultar palpites (${guesses.length})</span>
         </summary>
         <div id="${escapeAttr(panelId)}" class="guesses-panel">
+          <div class="visible-guess-row visible-guess-head">
+            <span>Participante</span>
+            <span>Palpite</span>
+            <span>Pontos</span>
+          </div>
           ${guesses.map((guess) => {
             const score = calculateScore(game, guess);
             return `
               <div class="visible-guess-row">
-                <span>${escapeHtml(guess.participantName)}</span>
-                <span>${guess.goalsA} x ${guess.goalsB}</span>
-                <span>${formatPoints(score.points)} pts</span>
+                <span class="guess-name">${escapeHtml(guess.participantName)}</span>
+                <span class="guess-score">${guess.goalsA} x ${guess.goalsB}</span>
+                <span class="guess-points">${formatPoints(score.points)}</span>
               </div>
             `;
           }).join("")}

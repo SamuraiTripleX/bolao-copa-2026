@@ -564,6 +564,7 @@ select:disabled {
   background: var(--surface-soft);
   color: var(--ink);
   font-weight: 900;
+  cursor: pointer;
   list-style: none;
 }
 
@@ -589,21 +590,59 @@ select:disabled {
 
 .guesses-panel {
   display: grid;
-  gap: 7px;
-  padding: 10px;
+  gap: 0;
+  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface-soft);
+  background: var(--surface);
 }
 
 .visible-guess-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) minmax(56px, auto) minmax(54px, auto);
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--line);
 }
 
-.visible-guess-row span:last-child {
+.visible-guess-row:first-child {
+  border-top: 0;
+}
+
+.visible-guess-head {
+  min-height: 34px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.guess-name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.guess-score {
+  justify-self: center;
+  min-width: 54px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  text-align: center;
+  font-weight: 900;
+}
+
+.guess-points {
+  justify-self: end;
+  min-width: 44px;
+  color: var(--green-dark);
+  text-align: right;
   font-weight: 900;
 }
 
@@ -804,12 +843,9 @@ td:last-child {
   }
 
   .visible-guess-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .visible-guess-row span:last-child {
-    grid-column: 2;
-    text-align: right;
+    grid-template-columns: minmax(0, 1fr) minmax(52px, auto) minmax(44px, auto);
+    gap: 8px;
+    padding-inline: 8px;
   }
 
   .ranking-score {
