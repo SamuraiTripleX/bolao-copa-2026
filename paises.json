@@ -1,0 +1,341 @@
+{
+  "updated_at": "2026-05-07",
+  "countries": [
+    {
+      "id": 1,
+      "code": "ALG",
+      "short_name": "Argélia",
+      "long_name": "Argélia",
+      "aliases": ["Algeria"]
+    },
+    {
+      "id": 2,
+      "code": "ARG",
+      "short_name": "Argentina",
+      "long_name": "Argentina",
+      "aliases": []
+    },
+    {
+      "id": 3,
+      "code": "AUS",
+      "short_name": "Austrália",
+      "long_name": "Austrália",
+      "aliases": ["Australia"]
+    },
+    {
+      "id": 4,
+      "code": "AUT",
+      "short_name": "Áustria",
+      "long_name": "Áustria",
+      "aliases": ["Austria"]
+    },
+    {
+      "id": 5,
+      "code": "BEL",
+      "short_name": "Bélgica",
+      "long_name": "Bélgica",
+      "aliases": ["Belgium"]
+    },
+    {
+      "id": 6,
+      "code": "BIH",
+      "short_name": "Bósnia e Herzegovina",
+      "long_name": "Bósnia e Herzegovina",
+      "aliases": ["Bósnia", "Bósnia-Herzegovina", "Bosnia-Herzegovina", "Bosnia and Herzegovina", "Bosnia & Herzegovina"]
+    },
+    {
+      "id": 7,
+      "code": "BRA",
+      "short_name": "Brasil",
+      "long_name": "Brasil",
+      "aliases": ["Brazil"]
+    },
+    {
+      "id": 8,
+      "code": "CAN",
+      "short_name": "Canadá",
+      "long_name": "Canadá",
+      "aliases": ["Canada"]
+    },
+    {
+      "id": 9,
+      "code": "CIV",
+      "short_name": "Costa do Marfim",
+      "long_name": "Costa do Marfim",
+      "aliases": ["Ivory Coast", "Côte d'Ivoire", "Cote d'Ivoire"]
+    },
+    {
+      "id": 10,
+      "code": "COD",
+      "short_name": "RD Congo",
+      "long_name": "República Democrática do Congo",
+      "aliases": ["DR Congo", "Rep. Democrática do Congo", "República Democrática do Congo", "República do Congo", "Democratic Republic of the Congo"]
+    },
+    {
+      "id": 11,
+      "code": "COL",
+      "short_name": "Colômbia",
+      "long_name": "Colômbia",
+      "aliases": ["Colombia"]
+    },
+    {
+      "id": 12,
+      "code": "CPV",
+      "short_name": "Cabo Verde",
+      "long_name": "Cabo Verde",
+      "aliases": ["Cape Verde", "Cape Verde Islands"]
+    },
+    {
+      "id": 13,
+      "code": "CRO",
+      "short_name": "Croácia",
+      "long_name": "Croácia",
+      "aliases": ["Croatia"]
+    },
+    {
+      "id": 14,
+      "code": "CUW",
+      "short_name": "Curação",
+      "long_name": "Curação",
+      "aliases": ["Curacao", "Curaçao"]
+    },
+    {
+      "id": 15,
+      "code": "CZE",
+      "short_name": "Tchéquia",
+      "long_name": "República Checa",
+      "aliases": ["Chéquia", "República Checa", "República Tcheca", "Czech Republic", "Czechia"]
+    },
+    {
+      "id": 16,
+      "code": "ECU",
+      "short_name": "Equador",
+      "long_name": "Equador",
+      "aliases": ["Ecuador"]
+    },
+    {
+      "id": 17,
+      "code": "EGY",
+      "short_name": "Egito",
+      "long_name": "Egito",
+      "aliases": ["Egypt"]
+    },
+    {
+      "id": 18,
+      "code": "ENG",
+      "short_name": "Inglaterra",
+      "long_name": "Inglaterra",
+      "aliases": ["England"]
+    },
+    {
+      "id": 19,
+      "code": "ESP",
+      "short_name": "Espanha",
+      "long_name": "Espanha",
+      "aliases": ["Spain"]
+    },
+    {
+      "id": 20,
+      "code": "FRA",
+      "short_name": "França",
+      "long_name": "França",
+      "aliases": ["France"]
+    },
+    {
+      "id": 21,
+      "code": "GER",
+      "short_name": "Alemanha",
+      "long_name": "Alemanha",
+      "aliases": ["Germany"]
+    },
+    {
+      "id": 22,
+      "code": "GHA",
+      "short_name": "Gana",
+      "long_name": "Gana",
+      "aliases": ["Ghana"]
+    },
+    {
+      "id": 23,
+      "code": "HAI",
+      "short_name": "Haiti",
+      "long_name": "Haiti",
+      "aliases": ["Haití"]
+    },
+    {
+      "id": 24,
+      "code": "IRN",
+      "short_name": "Irã",
+      "long_name": "Irã",
+      "aliases": ["Iran"]
+    },
+    {
+      "id": 25,
+      "code": "IRQ",
+      "short_name": "Iraque",
+      "long_name": "Iraque",
+      "aliases": ["Iraq"]
+    },
+    {
+      "id": 26,
+      "code": "JOR",
+      "short_name": "Jordânia",
+      "long_name": "Jordânia",
+      "aliases": ["Jordan"]
+    },
+    {
+      "id": 27,
+      "code": "JPN",
+      "short_name": "Japão",
+      "long_name": "Japão",
+      "aliases": ["Japan"]
+    },
+    {
+      "id": 28,
+      "code": "KOR",
+      "short_name": "Coreia do Sul",
+      "long_name": "Coreia do Sul",
+      "aliases": ["Coréia do Sul", "South Korea", "Korea Republic", "República da Coreia"]
+    },
+    {
+      "id": 29,
+      "code": "KSA",
+      "short_name": "Arábia Saudita",
+      "long_name": "Arábia Saudita",
+      "aliases": ["Saudi Arabia"]
+    },
+    {
+      "id": 30,
+      "code": "MAR",
+      "short_name": "Marrocos",
+      "long_name": "Marrocos",
+      "aliases": ["Morocco"]
+    },
+    {
+      "id": 31,
+      "code": "MEX",
+      "short_name": "México",
+      "long_name": "México",
+      "aliases": ["Mexico"]
+    },
+    {
+      "id": 32,
+      "code": "NED",
+      "short_name": "Países Baixos",
+      "long_name": "Países Baixos",
+      "aliases": ["Holanda", "Netherlands"]
+    },
+    {
+      "id": 33,
+      "code": "NOR",
+      "short_name": "Noruega",
+      "long_name": "Noruega",
+      "aliases": ["Norway"]
+    },
+    {
+      "id": 34,
+      "code": "NZL",
+      "short_name": "Nova Zelândia",
+      "long_name": "Nova Zelândia",
+      "aliases": ["New Zealand"]
+    },
+    {
+      "id": 35,
+      "code": "PAN",
+      "short_name": "Panamá",
+      "long_name": "Panamá",
+      "aliases": ["Panama"]
+    },
+    {
+      "id": 36,
+      "code": "PAR",
+      "short_name": "Paraguai",
+      "long_name": "Paraguai",
+      "aliases": ["Paraguay"]
+    },
+    {
+      "id": 37,
+      "code": "POR",
+      "short_name": "Portugal",
+      "long_name": "Portugal",
+      "aliases": []
+    },
+    {
+      "id": 38,
+      "code": "QAT",
+      "short_name": "Catar",
+      "long_name": "Catar",
+      "aliases": ["Qatar"]
+    },
+    {
+      "id": 39,
+      "code": "RSA",
+      "short_name": "África do Sul",
+      "long_name": "África do Sul",
+      "aliases": ["South Africa"]
+    },
+    {
+      "id": 40,
+      "code": "SCO",
+      "short_name": "Escócia",
+      "long_name": "Escócia",
+      "aliases": ["Scotland"]
+    },
+    {
+      "id": 41,
+      "code": "SEN",
+      "short_name": "Senegal",
+      "long_name": "Senegal",
+      "aliases": []
+    },
+    {
+      "id": 42,
+      "code": "SUI",
+      "short_name": "Suíça",
+      "long_name": "Suíça",
+      "aliases": ["Switzerland"]
+    },
+    {
+      "id": 43,
+      "code": "SWE",
+      "short_name": "Suécia",
+      "long_name": "Suécia",
+      "aliases": ["Sweden"]
+    },
+    {
+      "id": 44,
+      "code": "TUN",
+      "short_name": "Tunísia",
+      "long_name": "Tunísia",
+      "aliases": ["Tunisia"]
+    },
+    {
+      "id": 45,
+      "code": "TUR",
+      "short_name": "Turquia",
+      "long_name": "Turquia",
+      "aliases": ["Turkey", "Turquía", "Türkiye"]
+    },
+    {
+      "id": 46,
+      "code": "URU",
+      "short_name": "Uruguai",
+      "long_name": "Uruguai",
+      "aliases": ["Uruguay"]
+    },
+    {
+      "id": 47,
+      "code": "USA",
+      "short_name": "EUA",
+      "long_name": "Estados Unidos",
+      "aliases": ["Estados Unidos da América (EUA)", "United States", "USA", "Estados Unidos"]
+    },
+    {
+      "id": 48,
+      "code": "UZB",
+      "short_name": "Uzbequistão",
+      "long_name": "Uzbequistão",
+      "aliases": ["Usbequistão", "Uzbekistan"]
+    }
+  ]
+}

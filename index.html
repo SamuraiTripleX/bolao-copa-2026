@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bolão Copa 2026</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="supabase-config.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">B</span>
+        <div>
+          <h1>Bolão Copa 2026</h1>
+          <p id="connectionStatus">Carregando...</p>
+        </div>
+      </div>
+
+      <nav class="tabs" aria-label="Views do bolão">
+        <button class="tab is-active" type="button" data-view="palpites">Palpites</button>
+        <button class="tab" type="button" data-view="ranking">Ranking</button>
+        <button id="adminTab" class="tab" type="button" data-view="admin" hidden>Resultados</button>
+        <button class="tab" type="button" data-view="regras">Regras</button>
+      </nav>
+    </header>
+
+    <main class="app-shell">
+      <aside class="side-panel">
+        <section class="panel" aria-labelledby="sessionTitle">
+          <div class="panel-heading">
+            <h2 id="sessionTitle">Participante</h2>
+            <span id="sessionBadge" class="badge">Local</span>
+          </div>
+
+          <form id="authForm" class="stack" hidden>
+            <label class="field">
+              <span>Primeiro nome</span>
+              <input id="authName" type="text" autocomplete="given-name" maxlength="40" placeholder="Seu nome">
+            </label>
+            <label class="field">
+              <span>Convite</span>
+              <input id="authInvite" type="password" autocomplete="off" maxlength="80" placeholder="Código recebido">
+            </label>
+            <button class="button button-primary" type="submit">Entrar neste dispositivo</button>
+          </form>
+
+          <form id="profileForm" class="stack">
+            <label class="field">
+              <span>Nome local</span>
+              <input id="profileName" type="text" autocomplete="name" maxlength="80" placeholder="Seu nome">
+            </label>
+            <button class="button button-primary" type="submit">Salvar perfil</button>
+          </form>
+
+          <button id="signOutButton" class="button button-ghost" type="button" hidden>Sair deste dispositivo</button>
+        </section>
+
+        <section class="panel" aria-labelledby="summaryTitle">
+          <div class="panel-heading">
+            <h2 id="summaryTitle">Resumo</h2>
+          </div>
+          <dl class="stats-grid">
+            <div>
+              <dt>Jogos</dt>
+              <dd id="totalGames">0</dd>
+            </div>
+            <div>
+              <dt>Salvos</dt>
+              <dd id="savedGuesses">0</dd>
+            </div>
+            <div>
+              <dt>Abertos</dt>
+              <dd id="openGames">0</dd>
+            </div>
+            <div>
+              <dt>Finalizados</dt>
+              <dd id="finishedGames">0</dd>
+            </div>
+          </dl>
+          <div id="nextGame" class="next-game"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <section id="view-palpites" class="view is-active" aria-labelledby="palpitesTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="palpitesTitle">Palpites</h2>
+              <p id="fixtureSource">Agenda</p>
+            </div>
+            <div class="toolbar">
+              <select id="phaseFilter" aria-label="Filtrar por fase">
+                <option value="todos">Todas as fases</option>
+              </select>
+              <select id="statusFilter" aria-label="Filtrar por status">
+                <option value="todos">Todos</option>
+                <option value="aberto">Abertos</option>
+                <option value="bloqueado">Bloqueados</option>
+                <option value="finalizado">Finalizados</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="gamesList" class="games-list" aria-live="polite"></div>
+        </section>
+
+        <section id="view-ranking" class="view" aria-labelledby="rankingTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="rankingTitle">Ranking</h2>
+              <p>Palpites dos outros aparecem quando o jogo fica finalizado.</p>
+            </div>
+          </div>
+          <div id="rankingList" class="ranking-list"></div>
+        </section>
+
+        <section id="view-admin" class="view" aria-labelledby="adminTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="adminTitle">Resultados</h2>
+              <p>Lance ou corrija placares finais dos jogos.</p>
+            </div>
+          </div>
+          <div id="adminGamesList" class="admin-list"></div>
+        </section>
+
+        <section id="view-regras" class="view" aria-labelledby="rulesTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="rulesTitle">Regras</h2>
+              <p>Pontuação base, bônus e desempates.</p>
+            </div>
+          </div>
+
+          <div class="rules-layout">
+            <article class="rules-block">
+              <h3>Pontuação por jogo</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Acerto</th>
+                    <th>Pontos</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td>Placar exato</td><td>10</td></tr>
+                  <tr><td>Resultado + saldo</td><td>7</td></tr>
+                  <tr><td>Resultado + gols de um time</td><td>6</td></tr>
+                  <tr><td>Apenas resultado</td><td>4</td></tr>
+                  <tr><td>Gols de um time, sem resultado</td><td>1</td></tr>
+                  <tr><td>Errou tudo</td><td>0</td></tr>
+                </tbody>
+              </table>
+            </article>
+
+            <article class="rules-block">
+              <h3>Bônus</h3>
+              <ul class="plain-list">
+                <li>Placar exato raro: +0 a +5.</li>
+                <li>Mata-mata com classificado certo: +3.</li>
+                <li>Multiplicador por fase aplicado no final.</li>
+              </ul>
+            </article>
+
+            <article class="rules-block">
+              <h3>Desempate</h3>
+              <ol class="plain-list">
+                <li>Mais placares exatos.</li>
+                <li>Mais acertos de vencedor ou empate.</li>
+                <li>Mais pontos na fase final.</li>
+                <li>Acerto do campeão, se habilitado.</li>
+              </ol>
+            </article>
+          </div>
+
+          <figure class="infographic">
+            <img src="Bol%C3%A3o.png" alt="Infográfico do bolão">
+          </figure>
+        </section>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

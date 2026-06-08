@@ -1,0 +1,66 @@
+{
+  "updated_at": "2026-06-07",
+  "source": "exemplo",
+  "games": [
+    {
+      "id": "demo-001",
+      "codigo": "JOGO-001",
+      "fase": "Fase de grupos",
+      "rodada": "Rodada 1",
+      "inicio": "2026-06-11T16:00:00-03:00",
+      "time_a_code": "BRA",
+      "time_b_code": "FRA",
+      "multiplicador": 1,
+      "mata_mata": false,
+      "status": "aberto",
+      "gols_a": null,
+      "gols_b": null,
+      "classificado_code": null
+    },
+    {
+      "id": "demo-002",
+      "codigo": "JOGO-002",
+      "fase": "Fase de grupos",
+      "rodada": "Rodada 1",
+      "inicio": "2026-06-12T13:00:00-03:00",
+      "time_a_code": "ARG",
+      "time_b_code": "GER",
+      "multiplicador": 1,
+      "mata_mata": false,
+      "status": "aberto",
+      "gols_a": null,
+      "gols_b": null,
+      "classificado_code": null
+    },
+    {
+      "id": "demo-003",
+      "codigo": "JOGO-003",
+      "fase": "Fase de grupos",
+      "rodada": "Rodada 1",
+      "inicio": "2026-06-12T19:00:00-03:00",
+      "time_a_code": "USA",
+      "time_b_code": "MEX",
+      "multiplicador": 1,
+      "mata_mata": false,
+      "status": "aberto",
+      "gols_a": null,
+      "gols_b": null,
+      "classificado_code": null
+    },
+    {
+      "id": "demo-004",
+      "codigo": "JOGO-004",
+      "fase": "Oitavas de final",
+      "rodada": "Simulação",
+      "inicio": "2026-07-04T16:00:00-03:00",
+      "time_a_code": "POR",
+      "time_b_code": "ESP",
+      "multiplicador": 1.2,
+      "mata_mata": true,
+      "status": "aberto",
+      "gols_a": null,
+      "gols_b": null,
+      "classificado_code": null
+    }
+  ]
+}
