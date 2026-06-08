@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bolão Copa 2026</title>
-    <link rel="stylesheet" href="styles.css?v=20260608-1">
+    <link rel="stylesheet" href="styles.css?v=20260608-4">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="supabase-config.js?v=20260608-1" defer></script>
-    <script src="app.js?v=20260608-1" defer></script>
+    <script src="supabase-config.js?v=20260608-4" defer></script>
+    <script src="app.js?v=20260608-4" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -16,11 +16,13 @@
         <div>
           <h1>Bolão Copa 2026</h1>
           <p id="connectionStatus">Carregando...</p>
+          <p class="app-version">Versão 20260608-4</p>
         </div>
       </div>
 
       <nav class="tabs" aria-label="Views do bolão">
-        <button class="tab is-active" type="button" data-view="palpites">Palpites</button>
+        <button id="loginTab" class="tab is-active" type="button" data-view="login">Login</button>
+        <button class="tab" type="button" data-view="palpites">Palpites</button>
         <button class="tab" type="button" data-view="ranking">Ranking</button>
         <button id="adminTab" class="tab" type="button" data-view="admin" hidden>Resultados</button>
         <button class="tab" type="button" data-view="regras">Regras</button>
@@ -28,55 +30,33 @@
     </header>
 
     <main class="app-shell">
-      <aside class="side-panel">
-        <section class="panel" aria-labelledby="sessionTitle">
-          <div class="panel-heading">
-            <h2 id="sessionTitle">Participante</h2>
-          </div>
-
-          <form id="authForm" class="stack" hidden>
-            <label class="field">
-              <span>Primeiro nome</span>
-              <input id="authName" type="text" autocomplete="given-name" maxlength="40" placeholder="Seu nome">
-            </label>
-            <label class="field">
-              <span>Convite</span>
-              <input id="authInvite" type="text" autocomplete="off" maxlength="80" placeholder="Código recebido">
-            </label>
-            <button class="button button-primary" type="submit">Entrar neste dispositivo</button>
-          </form>
-
-          <button id="signOutButton" class="button button-ghost" type="button" hidden>Sair deste dispositivo</button>
-        </section>
-
-        <section class="panel" aria-labelledby="summaryTitle">
-          <div class="panel-heading">
-            <h2 id="summaryTitle">Resumo</h2>
-          </div>
-          <dl class="stats-grid">
-            <div>
-              <dt>Jogos</dt>
-              <dd id="totalGames">0</dd>
-            </div>
-            <div>
-              <dt>Salvos</dt>
-              <dd id="savedGuesses">0</dd>
-            </div>
-            <div>
-              <dt>Abertos</dt>
-              <dd id="openGames">0</dd>
-            </div>
-            <div>
-              <dt>Finalizados</dt>
-              <dd id="finishedGames">0</dd>
-            </div>
-          </dl>
-          <div id="nextGame" class="next-game"></div>
-        </section>
-      </aside>
-
       <section class="workspace">
-        <section id="view-palpites" class="view is-active" aria-labelledby="palpitesTitle">
+        <section id="view-login" class="view is-active" aria-labelledby="sessionTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="sessionTitle">Login</h2>
+              <p>Acesso deste dispositivo ao bolão.</p>
+            </div>
+          </div>
+
+          <section class="panel login-panel">
+            <form id="authForm" class="stack" hidden>
+              <label class="field">
+                <span>Primeiro nome</span>
+                <input id="authName" type="text" autocomplete="given-name" maxlength="40" placeholder="Seu nome">
+              </label>
+              <label class="field">
+                <span>Convite</span>
+                <input id="authInvite" type="text" autocomplete="off" maxlength="80" placeholder="Código recebido">
+              </label>
+              <button class="button button-primary" type="submit">Entrar neste dispositivo</button>
+            </form>
+
+            <button id="signOutButton" class="button button-ghost" type="button" hidden>Sair deste dispositivo</button>
+          </section>
+        </section>
+
+        <section id="view-palpites" class="view" aria-labelledby="palpitesTitle">
           <div class="view-header">
             <div>
               <h2 id="palpitesTitle">Palpites</h2>
@@ -94,6 +74,29 @@
               </select>
             </div>
           </div>
+
+          <section class="summary-strip" aria-labelledby="summaryTitle">
+            <h3 id="summaryTitle">Resumo</h3>
+            <dl class="stats-grid">
+              <div>
+                <dt>Jogos</dt>
+                <dd id="totalGames">0</dd>
+              </div>
+              <div>
+                <dt>Salvos</dt>
+                <dd id="savedGuesses">0</dd>
+              </div>
+              <div>
+                <dt>Abertos</dt>
+                <dd id="openGames">0</dd>
+              </div>
+              <div>
+                <dt>Finalizados</dt>
+                <dd id="finishedGames">0</dd>
+              </div>
+            </dl>
+            <div id="nextGame" class="next-game"></div>
+          </section>
 
           <div id="gamesList" class="games-list" aria-live="polite"></div>
         </section>
