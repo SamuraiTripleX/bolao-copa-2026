@@ -200,8 +200,12 @@
       return true;
     }
 
-    const [visibleResult, ownResult] = await Promise.all([
+    const [visibleResult, allVisibleResult, ownResult] = await Promise.all([
       state.client.rpc("palpites_visiveis"),
+      state.client
+        .from("palpites")
+        .select("id,jogo_id,participante_id,gols_a,gols_b,classificado_code,enviado_em,updated_at,participantes(nome)")
+        .order("updated_at", { ascending: false }),
       state.client
         .from("palpites")
         .select("id,jogo_id,participante_id,gols_a,gols_b,classificado_code,enviado_em,updated_at")
@@ -218,6 +222,13 @@
       guesses.push(...(visibleResult.data || []).map((guess) => mapGuessRow(guess, guess.participante_nome)));
     }
 
+    if (allVisibleResult.error) {
+      console.error(allVisibleResult.error);
+    } else {
+      loadedAnything = true;
+      guesses.push(...(allVisibleResult.data || []).map((guess) => mapGuessRow(guess, guess.participantes?.nome)));
+    }
+
     if (ownResult.error) {
       console.error(ownResult.error);
     } else {
@@ -227,7 +238,7 @@
 
     if (!loadedAnything) {
       if (!options.silent) {
-        showToast(`Não consegui carregar palpites: ${shortError(visibleResult.error || ownResult.error)}`);
+        showToast(`Não consegui carregar palpites: ${shortError(visibleResult.error || allVisibleResult.error || ownResult.error)}`);
       }
       return false;
     }
@@ -490,7 +501,6 @@
       return "";
     }
 
-    const isExpanded = state.expandedGames.has(game.id);
     const guesses = state.guesses
       .filter((guess) => guess.gameId === game.id)
       .sort((a, b) => a.participantName.localeCompare(b.participantName, "pt-BR"));
@@ -501,11 +511,12 @@
     }
 
     return `
-      <div class="visible-guesses">
-        <button class="guesses-toggle" type="button" data-toggle-guesses="${escapeAttr(game.id)}" aria-expanded="${isExpanded ? "true" : "false"}" aria-controls="${escapeAttr(panelId)}">
-          ${isExpanded ? "Ocultar palpites" : `Ver palpites (${guesses.length})`}
-        </button>
-        <div id="${escapeAttr(panelId)}" class="guesses-panel" ${isExpanded ? "" : "hidden"}>
+      <details class="visible-guesses">
+        <summary class="guesses-toggle" aria-controls="${escapeAttr(panelId)}">
+          <span class="label-closed">Ver palpites (${guesses.length})</span>
+          <span class="label-open">Ocultar palpites (${guesses.length})</span>
+        </summary>
+        <div id="${escapeAttr(panelId)}" class="guesses-panel">
           ${guesses.map((guess) => {
             const score = calculateScore(game, guess);
             return `
@@ -517,7 +528,7 @@
             `;
           }).join("")}
         </div>
-      </div>
+      </details>
     `;
   }
 

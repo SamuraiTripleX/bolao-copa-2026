@@ -555,6 +555,8 @@ select:disabled {
 }
 
 .guesses-toggle {
+  display: grid;
+  place-items: center;
   min-height: 36px;
   width: 100%;
   border: 1px solid var(--line);
@@ -562,10 +564,27 @@ select:disabled {
   background: var(--surface-soft);
   color: var(--ink);
   font-weight: 900;
+  list-style: none;
 }
 
 .guesses-toggle:hover {
   border-color: var(--green);
+}
+
+.guesses-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.label-open {
+  display: none;
+}
+
+.visible-guesses[open] .label-closed {
+  display: none;
+}
+
+.visible-guesses[open] .label-open {
+  display: inline;
 }
 
 .guesses-panel {
