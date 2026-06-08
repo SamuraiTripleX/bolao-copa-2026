@@ -35,6 +35,7 @@
     fixtureSource: "exemplo",
     profile: { id: "", name: "", isAdmin: false },
     expandedGames: new Set(),
+    deadlineTimer: null,
     bootstrapped: false,
     filters: { phase: "todos", status: "todos" }
   };
@@ -57,6 +58,7 @@
     activateView(canUseProfile() ? "palpites" : "login");
     state.bootstrapped = true;
     render();
+    scheduleDeadlineWatcher();
   }
 
   function bindElements() {
@@ -377,6 +379,36 @@
     renderAdmin();
   }
 
+  function scheduleDeadlineWatcher() {
+    clearTimeout(state.deadlineTimer);
+
+    if (!state.bootstrapped || state.games.length === 0) {
+      return;
+    }
+
+    const now = Date.now();
+    const nextCutoff = state.games
+      .filter((game) => getGameStatus(game) === "aberto")
+      .map((game) => cutoffDate(game.startsAt).getTime())
+      .filter((time) => Number.isFinite(time) && time > now)
+      .sort((a, b) => a - b)[0];
+    const delay = nextCutoff
+      ? Math.min(Math.max(nextCutoff - now + 1000, 1000), 60000)
+      : 60000;
+
+    state.deadlineTimer = setTimeout(handleDeadlineTick, delay);
+  }
+
+  async function handleDeadlineTick() {
+    if (!state.bootstrapped) {
+      return;
+    }
+
+    await loadGuesses({ silent: true });
+    render();
+    scheduleDeadlineWatcher();
+  }
+
   function renderSession() {
     const isSupabase = state.mode === "supabase";
     const isLinked = Boolean(state.session && state.profile.id);
@@ -514,7 +546,9 @@
   }
 
   function renderVisibleGuesses(game) {
-    if (getGameStatus(game) !== "finalizado") {
+    const status = getGameStatus(game);
+
+    if (status === "aberto") {
       return "";
     }
 
@@ -540,12 +574,12 @@
             <span>Pontos</span>
           </div>
           ${guesses.map((guess) => {
-            const score = calculateScore(game, guess);
+            const points = game.result ? formatPoints(calculateScore(game, guess).points) : "-";
             return `
               <div class="visible-guess-row">
                 <span class="guess-name">${escapeHtml(guess.participantName)}</span>
                 <span class="guess-score">${guess.goalsA} x ${guess.goalsB}</span>
-                <span class="guess-points">${formatPoints(score.points)}</span>
+                <span class="guess-points">${points}</span>
               </div>
             `;
           }).join("")}
@@ -562,7 +596,7 @@
       return "Palpites liberados.";
     }
     if (status === "bloqueado") {
-      return "Prazo encerrado.";
+      return "Prazo encerrado. Palpites liberados.";
     }
     return `Fecha ${formatDateTime(cutoffDate(game.startsAt))}`;
   }
@@ -575,16 +609,28 @@
       return;
     }
 
-    els.rankingList.innerHTML = scores.map((row, index) => `
-      <article class="ranking-row">
-        <div class="rank-position">${index + 1}</div>
-        <div>
-          <div class="ranking-name">${escapeHtml(row.name)}</div>
-          <div class="ranking-detail">${row.exacts} exatos · ${row.results} resultados · ${row.games} jogos pontuados</div>
+    els.rankingList.innerHTML = `
+      <section class="ranking-table" aria-label="Tabela do ranking">
+        <div class="ranking-table-row ranking-table-head">
+          <span>Pos.</span>
+          <span>Participante</span>
+          <span>Pontos</span>
+          <span>Exatos</span>
+          <span>Resultados</span>
+          <span>Jogos</span>
         </div>
-        <div class="ranking-score">${formatPoints(row.points)}</div>
-      </article>
-    `).join("");
+        ${scores.map((row, index) => `
+          <article class="ranking-table-row">
+            <span class="rank-position">${index + 1}</span>
+            <span class="ranking-name">${escapeHtml(row.name)}</span>
+            <span class="ranking-score">${formatPoints(row.points)}</span>
+            <span>${row.exacts}</span>
+            <span>${row.results}</span>
+            <span>${row.games}</span>
+          </article>
+        `).join("")}
+      </section>
+    `;
   }
 
   function renderAdmin() {
@@ -794,7 +840,9 @@
       showToast("Palpite salvo.");
     } catch (error) {
       console.error(error);
-      showToast(`Não consegui salvar: ${shortError(error)}`);
+      await loadGuesses({ silent: true });
+      render();
+      showToast(guessSaveErrorMessage(error, game));
     } finally {
       button.disabled = false;
     }
@@ -1025,5 +1073,15 @@
   function shortError(error) {
     const message = error?.message || error?.details || "erro desconhecido";
     return message.length > 110 ? `${message.slice(0, 107)}...` : message;
+  }
+
+  function guessSaveErrorMessage(error, game) {
+    const text = `${error?.code || ""} ${error?.message || ""} ${error?.details || ""}`;
+
+    if (getGameStatus(game) !== "aberto" || /row-level security|policy|42501/i.test(text)) {
+      return "Prazo encerrado para este jogo.";
+    }
+
+    return `Não consegui salvar: ${shortError(error)}`;
   }
 })();
