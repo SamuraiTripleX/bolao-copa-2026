@@ -263,18 +263,35 @@
   function mergeGuessRows(guesses) {
     const rows = new Map();
     guesses.forEach((guess) => {
-      const key = guess.id || `${guess.participantId}:${guess.gameId}`;
-      rows.set(key, guess);
+      const key = guessKey(guess);
+      const current = rows.get(key);
+      rows.set(key, mergeGuessData(current, guess));
     });
     return [...rows.values()];
   }
 
   function mergeGuessIntoState(guess) {
-    const key = guess.id || `${guess.participantId}:${guess.gameId}`;
-    const current = mergeGuessRows(state.guesses);
-    const next = new Map(current.map((item) => [item.id || `${item.participantId}:${item.gameId}`, item]));
-    next.set(key, guess);
-    state.guesses = [...next.values()];
+    state.guesses = mergeGuessRows([...state.guesses, guess]);
+  }
+
+  function mergeGuessData(current, next) {
+    if (!current) {
+      return next;
+    }
+
+    if (hasRealParticipantName(current) && !hasRealParticipantName(next)) {
+      return { ...next, participantName: current.participantName };
+    }
+
+    return next;
+  }
+
+  function guessKey(guess) {
+    return guess.id || `${guess.participantId}:${guess.gameId}`;
+  }
+
+  function hasRealParticipantName(guess) {
+    return Boolean(guess?.participantName && guess.participantName !== "Participante");
   }
 
   async function loadProfile() {
