@@ -35,6 +35,7 @@
     fixtureSource: "exemplo",
     profile: { id: "", name: "", isAdmin: false },
     expandedGames: new Set(),
+    bootstrapped: false,
     filters: { phase: "todos", status: "todos" }
   };
 
@@ -52,13 +53,15 @@
     renderSession();
     await loadCountries();
     await loadGames();
-    await loadGuesses();
+    await loadGuesses({ silent: true });
+    activateView(canUseProfile() ? "palpites" : "login");
+    state.bootstrapped = true;
     render();
   }
 
   function bindElements() {
     const ids = [
-      "connectionStatus", "authForm", "authName", "authInvite", "signOutButton",
+      "connectionStatus", "loginTab", "authForm", "authName", "authInvite", "signOutButton",
       "totalGames", "savedGuesses", "openGames", "finishedGames", "nextGame",
       "fixtureSource", "phaseFilter", "statusFilter", "gamesList",
       "rankingList", "adminTab", "adminGamesList", "toast"
@@ -126,8 +129,14 @@
     state.client.auth.onAuthStateChange(async (_event, session) => {
       state.session = session;
       await loadProfile();
-      await loadGuesses();
-      render();
+      await loadGuesses({ silent: true });
+
+      if (state.bootstrapped) {
+        if (canUseProfile() && document.getElementById("view-login")?.classList.contains("is-active")) {
+          activateView("palpites");
+        }
+        render();
+      }
     });
 
     await loadProfile();
@@ -164,35 +173,71 @@
         .select("*")
         .order("inicio", { ascending: true });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
-        state.games = data.map(mapSupabaseGame);
-        state.fixtureSource = "supabase";
-        return;
+      state.fixtureSource = "supabase";
+
+      if (error) {
+        console.error(error);
+        state.games = [];
+        showToast(`Não consegui carregar jogos: ${shortError(error)}`);
+        return false;
       }
+
+      state.games = Array.isArray(data) ? data.map(mapSupabaseGame) : [];
+      return true;
     }
 
     const data = await loadJson("jogos.json", { games: [] });
     state.games = Array.isArray(data.games) ? data.games.map(mapJsonGame) : [];
     state.fixtureSource = data.source || "arquivo";
+    return true;
   }
 
-  async function loadGuesses() {
+  async function loadGuesses(options = {}) {
     if (state.mode !== "supabase" || !state.session || !state.profile.id) {
       if (state.mode === "supabase") {
         state.guesses = [];
       }
-      return;
+      return true;
     }
 
-    const { data, error } = await state.client
-      .rpc("palpites_visiveis");
+    const [visibleResult, ownResult] = await Promise.all([
+      state.client.rpc("palpites_visiveis"),
+      state.client
+        .from("palpites")
+        .select("id,jogo_id,participante_id,gols_a,gols_b,classificado_code,enviado_em,updated_at")
+        .eq("participante_id", state.profile.id)
+    ]);
 
-    if (error) {
-      showToast("Não consegui carregar os palpites.");
-      return;
+    const guesses = [];
+    let loadedAnything = false;
+
+    if (visibleResult.error) {
+      console.error(visibleResult.error);
+    } else {
+      loadedAnything = true;
+      guesses.push(...(visibleResult.data || []).map((guess) => mapGuessRow(guess, guess.participante_nome)));
     }
 
-    state.guesses = data.map((guess) => ({
+    if (ownResult.error) {
+      console.error(ownResult.error);
+    } else {
+      loadedAnything = true;
+      guesses.push(...(ownResult.data || []).map((guess) => mapGuessRow(guess, state.profile.name)));
+    }
+
+    if (!loadedAnything) {
+      if (!options.silent) {
+        showToast(`Não consegui carregar palpites: ${shortError(visibleResult.error || ownResult.error)}`);
+      }
+      return false;
+    }
+
+    state.guesses = mergeGuessRows(guesses);
+    return true;
+  }
+
+  function mapGuessRow(guess, participantName) {
+    return {
       id: guess.id,
       gameId: guess.jogo_id,
       participantId: guess.participante_id,
@@ -200,8 +245,25 @@
       goalsB: guess.gols_b,
       qualifiedCode: guess.classificado_code,
       updatedAt: guess.updated_at,
-      participantName: guess.participante_nome || "Participante"
-    }));
+      participantName: participantName || "Participante"
+    };
+  }
+
+  function mergeGuessRows(guesses) {
+    const rows = new Map();
+    guesses.forEach((guess) => {
+      const key = guess.id || `${guess.participantId}:${guess.gameId}`;
+      rows.set(key, guess);
+    });
+    return [...rows.values()];
+  }
+
+  function mergeGuessIntoState(guess) {
+    const key = guess.id || `${guess.participantId}:${guess.gameId}`;
+    const current = mergeGuessRows(state.guesses);
+    const next = new Map(current.map((item) => [item.id || `${item.participantId}:${item.gameId}`, item]));
+    next.set(key, guess);
+    state.guesses = [...next.values()];
   }
 
   async function loadProfile() {
@@ -299,9 +361,14 @@
 
     if (els.authForm) els.authForm.hidden = !isSupabase || isLinked;
     if (els.signOutButton) els.signOutButton.hidden = !isSupabase || !isLinked;
+    if (els.loginTab) els.loginTab.hidden = false;
     if (els.adminTab) els.adminTab.hidden = !(isSupabase && state.profile.isAdmin);
 
     if (els.adminTab?.hidden && document.getElementById("view-admin")?.classList.contains("is-active")) {
+      activateView("palpites");
+    }
+
+    if (els.loginTab?.hidden && document.getElementById("view-login")?.classList.contains("is-active")) {
       activateView("palpites");
     }
   }
@@ -328,9 +395,8 @@
     els.savedGuesses.textContent = saved;
     els.openGames.textContent = statuses.filter((status) => status === "aberto").length;
     els.finishedGames.textContent = statuses.filter((status) => status === "finalizado").length;
-    els.fixtureSource.textContent = state.fixtureSource === "exemplo"
-      ? "Agenda de exemplo"
-      : `Agenda: ${state.fixtureSource}`;
+    els.fixtureSource.textContent = "";
+    els.fixtureSource.hidden = true;
 
     els.nextGame.innerHTML = next
       ? `<strong>Próximo:</strong> ${teamName(next.teamA)} x ${teamName(next.teamB)}<br>${formatDateTime(next.startsAt)}`
@@ -345,7 +411,10 @@
     });
 
     if (filtered.length === 0) {
-      els.gamesList.innerHTML = `<div class="empty-state">Nenhum jogo neste filtro.</div>`;
+      const message = state.games.length === 0 && state.mode === "supabase"
+        ? "Nenhum jogo veio do Supabase. Confira se os jogos foram cadastrados na tabela jogos."
+        : "Nenhum jogo neste filtro.";
+      els.gamesList.innerHTML = `<div class="empty-state">${message}</div>`;
       return;
     }
 
@@ -379,15 +448,17 @@
           </div>
         </div>
         <form class="guess-form">
-          <div class="score-grid">
-            <label class="field">
-              <span>${escapeHtml(teamName(game.teamA))}</span>
-              <input class="score-input" name="goalsA" type="number" inputmode="numeric" min="0" max="20" value="${guess?.goalsA ?? ""}" ${locked ? "disabled" : ""}>
+          <div class="score-grid guess-score-grid">
+            <label class="score-field score-field-left">
+              <span class="sr-only">Placar ${escapeHtml(teamName(game.teamA))}</span>
+              ${renderScoreFlag(game.teamA)}
+              <input class="score-input" name="goalsA" type="number" inputmode="numeric" min="0" max="20" aria-label="Placar ${escapeAttr(teamName(game.teamA))}" value="${guess?.goalsA ?? ""}" ${locked ? "disabled" : ""}>
             </label>
             <div class="score-separator">x</div>
-            <label class="field">
-              <span>${escapeHtml(teamName(game.teamB))}</span>
-              <input class="score-input" name="goalsB" type="number" inputmode="numeric" min="0" max="20" value="${guess?.goalsB ?? ""}" ${locked ? "disabled" : ""}>
+            <label class="score-field score-field-right">
+              <span class="sr-only">Placar ${escapeHtml(teamName(game.teamB))}</span>
+              <input class="score-input" name="goalsB" type="number" inputmode="numeric" min="0" max="20" aria-label="Placar ${escapeAttr(teamName(game.teamB))}" value="${guess?.goalsB ?? ""}" ${locked ? "disabled" : ""}>
+              ${renderScoreFlag(game.teamB)}
             </label>
           </div>
           ${game.knockout ? renderQualifiedSelect(game, guess, locked) : ""}
@@ -409,6 +480,10 @@
         <div class="team-name">${escapeHtml(teamName(code))}</div>
       </div>
     `;
+  }
+
+  function renderScoreFlag(code) {
+    return `<img class="score-flag" src="flags/${escapeAttr(code)}.png" alt="">`;
   }
 
   function renderQualifiedSelect(game, guess, locked) {
@@ -650,7 +725,8 @@
       isAdmin: Boolean(data[0].is_admin)
     };
     els.authInvite.value = "";
-    await loadGuesses();
+    await loadGuesses({ silent: true });
+    activateView("palpites");
     render();
     showToast("Dispositivo vinculado.");
     return;
@@ -664,6 +740,7 @@
     state.session = null;
     state.profile = { id: "", name: "", isAdmin: false };
     state.guesses = [];
+    activateView("login");
     render();
   }
 
@@ -713,10 +790,17 @@
     button.disabled = true;
 
     try {
-      await saveGuess(game, { goalsA, goalsB, qualifiedCode });
-      await loadGuesses();
+      const savedGuess = await saveGuess(game, { goalsA, goalsB, qualifiedCode });
+      mergeGuessIntoState(savedGuess);
+      await loadGuesses({ silent: true });
+      if (!getMyGuess(game.id)) {
+        mergeGuessIntoState(savedGuess);
+      }
       render();
       showToast("Palpite salvo.");
+    } catch (error) {
+      console.error(error);
+      showToast(`Não consegui salvar: ${shortError(error)}`);
     } finally {
       button.disabled = false;
     }
@@ -778,7 +862,7 @@
 
   async function saveGuess(game, guess) {
     if (state.mode === "supabase") {
-      const { error } = await state.client
+      const { data, error } = await state.client
         .from("palpites")
         .upsert({
           jogo_id: game.id,
@@ -786,13 +870,14 @@
           gols_a: guess.goalsA,
           gols_b: guess.goalsB,
           classificado_code: guess.qualifiedCode
-        }, { onConflict: "participante_id,jogo_id" });
+        }, { onConflict: "participante_id,jogo_id" })
+        .select("id,jogo_id,participante_id,gols_a,gols_b,classificado_code,enviado_em,updated_at")
+        .single();
 
       if (error) {
-        showToast("O Supabase rejeitou este palpite.");
         throw error;
       }
-      return;
+      return mapGuessRow(data, state.profile.name);
     }
 
     const existingIndex = state.guesses.findIndex((item) => item.gameId === game.id);
@@ -814,6 +899,7 @@
     }
 
     saveLocalState();
+    return localGuess;
   }
 
   async function saveResult(game, result) {
@@ -953,5 +1039,10 @@
     toastTimer = setTimeout(() => {
       els.toast.classList.remove("is-visible");
     }, 2600);
+  }
+
+  function shortError(error) {
+    const message = error?.message || error?.details || "erro desconhecido";
+    return message.length > 110 ? `${message.slice(0, 107)}...` : message;
   }
 })();
