@@ -609,28 +609,64 @@
       return;
     }
 
-    els.rankingList.innerHTML = `
-      <section class="ranking-table" aria-label="Tabela do ranking">
-        <div class="ranking-table-row ranking-table-head">
-          <span>Pos.</span>
-          <span>Participante</span>
-          <span>Pontos</span>
-          <span>Exatos</span>
-          <span>Resultados</span>
-          <span>Jogos</span>
+    els.rankingList.innerHTML = scores.map((row, index) => `
+      <article class="ranking-card" data-pos="${index + 1}">
+        <div class="card-main">
+          <div class="rank-badge">
+            ${index + 1}
+            ${rankMedal(index)}
+          </div>
+          <div class="card-identity">
+            <div class="card-name">
+              ${escapeHtml(row.name)}
+              ${row.participantId === state.profile.id ? `<span class="card-name-you">Você</span>` : ""}
+            </div>
+            <div class="card-subtitle">${rankingSubtitle(row, index, scores)}</div>
+          </div>
+          <div class="card-score">
+            <div class="card-score-value">${formatPoints(row.points)}</div>
+            <div class="card-score-label">pontos</div>
+          </div>
         </div>
-        ${scores.map((row, index) => `
-          <article class="ranking-table-row">
-            <span class="rank-position">${index + 1}</span>
-            <span class="ranking-name">${escapeHtml(row.name)}</span>
-            <span class="ranking-score">${formatPoints(row.points)}</span>
-            <span>${row.exacts}</span>
-            <span>${row.results}</span>
-            <span>${row.games}</span>
-          </article>
-        `).join("")}
-      </section>
-    `;
+        <div class="card-stats">
+          <div class="stat">
+            <span class="stat-icon">🎯</span>
+            <span class="stat-value">${row.exacts}</span>
+            <span class="stat-label">Exatos</span>
+          </div>
+          <div class="stat">
+            <span class="stat-icon">✓</span>
+            <span class="stat-value">${row.results}</span>
+            <span class="stat-label">Resultados</span>
+          </div>
+          <div class="stat">
+            <span class="stat-icon">⚽</span>
+            <span class="stat-value">${row.games}</span>
+            <span class="stat-label">Jogos</span>
+          </div>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  function rankMedal(index) {
+    const medals = ["🥇", "🥈", "🥉"];
+    return medals[index] ? `<span class="rank-medal">${medals[index]}</span>` : "";
+  }
+
+  function rankingSubtitle(row, index, scores) {
+    if (index === 0) {
+      return "Líder do ranking";
+    }
+
+    const leader = scores[0];
+    const diff = Math.max(0, leader.points - row.points);
+
+    if (diff === 0) {
+      return "Empatado na liderança";
+    }
+
+    return `${formatPoints(diff)} pts atrás do líder`;
   }
 
   function renderAdmin() {
@@ -704,6 +740,7 @@
       const score = calculateScore(game, guess);
       const userKey = guess.participantId || "local";
       const row = rows.get(userKey) || {
+        participantId: userKey,
         name: guess.participantName || state.profile.name || "Participante",
         points: 0,
         exacts: 0,
