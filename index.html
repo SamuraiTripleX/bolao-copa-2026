@@ -32,7 +32,6 @@
         <section class="panel" aria-labelledby="sessionTitle">
           <div class="panel-heading">
             <h2 id="sessionTitle">Participante</h2>
-            <span id="sessionBadge" class="badge">Local</span>
           </div>
 
           <form id="authForm" class="stack" hidden>
@@ -42,17 +41,9 @@
             </label>
             <label class="field">
               <span>Convite</span>
-              <input id="authInvite" type="password" autocomplete="off" maxlength="80" placeholder="Código recebido">
+              <input id="authInvite" type="text" autocomplete="off" maxlength="80" placeholder="Código recebido">
             </label>
             <button class="button button-primary" type="submit">Entrar neste dispositivo</button>
-          </form>
-
-          <form id="profileForm" class="stack">
-            <label class="field">
-              <span>Nome local</span>
-              <input id="profileName" type="text" autocomplete="name" maxlength="80" placeholder="Seu nome">
-            </label>
-            <button class="button button-primary" type="submit">Salvar perfil</button>
           </form>
 
           <button id="signOutButton" class="button button-ghost" type="button" hidden>Sair deste dispositivo</button>
