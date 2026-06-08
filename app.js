@@ -461,7 +461,6 @@
               ${renderScoreFlag(game.teamB)}
             </label>
           </div>
-          ${game.knockout ? renderQualifiedSelect(game, guess, locked) : ""}
           ${resultLine}
           ${renderVisibleGuesses(game)}
           <div class="card-actions">
@@ -484,19 +483,6 @@
 
   function renderScoreFlag(code) {
     return `<img class="score-flag" src="flags/${escapeAttr(code)}.png" alt="">`;
-  }
-
-  function renderQualifiedSelect(game, guess, locked) {
-    return `
-      <div class="qualified-row">
-        <label for="qualified-${escapeAttr(game.id)}">Classificado</label>
-        <select id="qualified-${escapeAttr(game.id)}" name="qualifiedCode" ${locked ? "disabled" : ""}>
-          <option value="">Sem escolha</option>
-          <option value="${escapeAttr(game.teamA)}" ${guess?.qualifiedCode === game.teamA ? "selected" : ""}>${escapeHtml(teamName(game.teamA))}</option>
-          <option value="${escapeAttr(game.teamB)}" ${guess?.qualifiedCode === game.teamB ? "selected" : ""}>${escapeHtml(teamName(game.teamB))}</option>
-        </select>
-      </div>
-    `;
   }
 
   function renderVisibleGuesses(game) {
@@ -589,7 +575,7 @@
   }
 
   function renderAdminGameCard(game) {
-    const status = game.status || getGameStatus(game);
+    const status = getGameStatus(game);
     const result = game.result || {};
 
     return `
@@ -618,36 +604,12 @@
               <input class="score-input" name="goalsB" type="number" inputmode="numeric" min="0" max="20" value="${result.goalsB ?? ""}">
             </label>
           </div>
-          <div class="admin-form-row">
-            <label class="field">
-              <span>Status</span>
-              <select name="status">
-                <option value="aberto" ${status === "aberto" ? "selected" : ""}>Aberto</option>
-                <option value="bloqueado" ${status === "bloqueado" ? "selected" : ""}>Bloqueado</option>
-                <option value="finalizado" ${status === "finalizado" ? "selected" : ""}>Finalizado</option>
-              </select>
-            </label>
-            ${game.knockout ? renderAdminQualifiedSelect(game, result) : `<div></div>`}
-          </div>
           <div class="card-actions">
-            <div class="game-note">Salvar como finalizado libera os palpites deste jogo.</div>
-            <button class="button button-primary" type="submit">Salvar resultado</button>
+            <div class="game-note">Salvar libera os palpites deste jogo.</div>
+            <button class="button button-primary" type="submit">${game.result ? "Corrigir resultado" : "Finalizar jogo"}</button>
           </div>
         </form>
       </article>
-    `;
-  }
-
-  function renderAdminQualifiedSelect(game, result) {
-    return `
-      <label class="field">
-        <span>Classificado</span>
-        <select name="qualifiedCode">
-          <option value="">Sem escolha</option>
-          <option value="${escapeAttr(game.teamA)}" ${result.qualifiedCode === game.teamA ? "selected" : ""}>${escapeHtml(teamName(game.teamA))}</option>
-          <option value="${escapeAttr(game.teamB)}" ${result.qualifiedCode === game.teamB ? "selected" : ""}>${escapeHtml(teamName(game.teamB))}</option>
-        </select>
-      </label>
     `;
   }
 
@@ -750,6 +712,7 @@
       return;
     }
 
+    event.preventDefault();
     const gameId = toggle.dataset.toggleGuesses;
     if (state.expandedGames.has(gameId)) {
       state.expandedGames.delete(gameId);
@@ -774,8 +737,6 @@
     const formData = new FormData(form);
     const goalsA = parseScore(formData.get("goalsA"));
     const goalsB = parseScore(formData.get("goalsB"));
-    const qualifiedCode = formData.get("qualifiedCode") || null;
-
     if (goalsA === null || goalsB === null) {
       showToast("Informe os dois placares.");
       return;
@@ -790,7 +751,7 @@
     button.disabled = true;
 
     try {
-      const savedGuess = await saveGuess(game, { goalsA, goalsB, qualifiedCode });
+      const savedGuess = await saveGuess(game, { goalsA, goalsB });
       mergeGuessIntoState(savedGuess);
       await loadGuesses({ silent: true });
       if (!getMyGuess(game.id)) {
@@ -821,28 +782,16 @@
     if (!game) return;
 
     const formData = new FormData(form);
-    const status = formData.get("status");
     const goalsA = parseScore(formData.get("goalsA"));
     const goalsB = parseScore(formData.get("goalsB"));
-    const qualifiedCode = formData.get("qualifiedCode") || null;
-
-    if (!["aberto", "bloqueado", "finalizado"].includes(status)) {
-      showToast("Status inválido.");
-      return;
-    }
 
     if ((goalsA === null) !== (goalsB === null)) {
       showToast("Informe os dois gols ou deixe os dois vazios.");
       return;
     }
 
-    if (status === "finalizado" && (goalsA === null || goalsB === null)) {
+    if (goalsA === null || goalsB === null) {
       showToast("Informe o placar final.");
-      return;
-    }
-
-    if (status === "finalizado" && game.knockout && !qualifiedCode) {
-      showToast("Informe o classificado.");
       return;
     }
 
@@ -850,7 +799,7 @@
     button.disabled = true;
 
     try {
-      await saveResult(game, { status, goalsA, goalsB, qualifiedCode });
+      await saveResult(game, { goalsA, goalsB });
       await loadGames();
       await loadGuesses();
       render();
@@ -869,7 +818,7 @@
           participante_id: state.profile.id,
           gols_a: guess.goalsA,
           gols_b: guess.goalsB,
-          classificado_code: guess.qualifiedCode
+          classificado_code: null
         }, { onConflict: "participante_id,jogo_id" })
         .select("id,jogo_id,participante_id,gols_a,gols_b,classificado_code,enviado_em,updated_at")
         .single();
@@ -887,7 +836,7 @@
       participantId: "local",
       goalsA: guess.goalsA,
       goalsB: guess.goalsB,
-      qualifiedCode: guess.qualifiedCode,
+      qualifiedCode: null,
       updatedAt: new Date().toISOString(),
       participantName: state.profile.name || "Participante"
     };
@@ -909,10 +858,10 @@
     }
 
     const payload = {
-      status: result.status,
-      gols_a: result.status === "finalizado" ? result.goalsA : null,
-      gols_b: result.status === "finalizado" ? result.goalsB : null,
-      classificado_code: result.status === "finalizado" ? result.qualifiedCode : null
+      status: "finalizado",
+      gols_a: result.goalsA,
+      gols_b: result.goalsB,
+      classificado_code: null
     };
 
     const { error } = await state.client
@@ -975,8 +924,7 @@
     else if (oneTeamGoals) base = 1;
 
     const rarity = exact ? getExoticBonus(guessA, guessB) : 0;
-    const qualified = game.knockout && guess.qualifiedCode && game.result.qualifiedCode === guess.qualifiedCode ? 3 : 0;
-    const points = Math.floor((base + rarity + qualified) * game.multiplier);
+    const points = Math.floor((base + rarity) * game.multiplier);
 
     return { points, exact, result };
   }
