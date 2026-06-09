@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bolão Copa 2026</title>
-    <link rel="stylesheet" href="styles.css?v=20260609-7">
+    <link rel="stylesheet" href="styles.css?v=2026-001">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="supabase-config.js?v=20260609-7" defer></script>
-    <script src="app.js?v=20260609-7" defer></script>
+    <script src="supabase-config.js?v=2026-001" defer></script>
+    <script src="app.js?v=2026-001" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -16,7 +16,7 @@
         <div>
           <h1>Bolão Copa 2026</h1>
           <p id="connectionStatus">Carregando...</p>
-          <p class="app-version">Versão 20260609-7</p>
+          <p class="app-version">Versão 2026-001</p>
         </div>
       </div>
 
@@ -188,125 +188,149 @@
           </div>
 
           <div class="rules-layout">
-            <article class="rules-block">
-              <h3>Pontuação por jogo</h3>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Acerto</th>
-                    <th>Pontos</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Placar exato</td><td>10</td></tr>
-                  <tr><td>Vencedor + saldo</td><td>6</td></tr>
-                  <tr><td>Vencedor + gols de um time</td><td>5</td></tr>
-                  <tr><td>Empate não exato</td><td>5</td></tr>
-                  <tr><td>Vencedor + total de gols</td><td>5</td></tr>
-                  <tr><td>Vencedor</td><td>4</td></tr>
-                  <tr><td>Gols de um time, sem resultado</td><td>1</td></tr>
-                  <tr><td>Total de gols, sem resultado</td><td>1</td></tr>
-                  <tr><td>Errou tudo</td><td>0</td></tr>
-                </tbody>
-              </table>
+            <article class="rules-card">
+              <p class="rules-card-label">
+                <svg class="rules-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                Pontuação por jogo
+              </p>
+
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Placar exato</span>
+                <span class="rules-score-pts is-top">10 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Vencedor + saldo de gols</span>
+                <span class="rules-score-pts">6 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Vencedor + gols de um time</span>
+                <span class="rules-score-pts">5 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Empate não exato</span>
+                <span class="rules-score-pts">5 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Vencedor + total de gols</span>
+                <span class="rules-score-pts">5 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Vencedor</span>
+                <span class="rules-score-pts">4 pts</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Gols de um time, sem resultado</span>
+                <span class="rules-score-pts">1 pt</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Total de gols, sem resultado</span>
+                <span class="rules-score-pts">1 pt</span>
+              </div>
+              <div class="rules-score-row">
+                <span class="rules-score-desc">Errou tudo</span>
+                <span class="rules-score-pts is-zero">0 pts</span>
+              </div>
             </article>
 
-            <article class="rules-block">
-              <h3>Bônus</h3>
-              <table class="bonus-table">
-                <thead>
-                  <tr>
-                    <th>Placar</th>
-                    <th>Bônus</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>1 x 1</span>
-                        <span>1 x 0</span>
-                        <span>0 x 0</span>
-                        <span>2 x 1</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">0</span></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>2 x 0</span>
-                        <span>2 x 2</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">1</span></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>3 x 1</span>
-                        <span>3 x 0</span>
-                        <span>3 x 2</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">2</span></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>4 x 0</span>
-                        <span>4 x 1</span>
-                        <span>3 x 3</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">3</span></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>4 x 2</span>
-                        <span>5 x 0</span>
-                        <span>5 x 1</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">4</span></td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="score-token-list">
-                        <span>4 x 3</span>
-                        <span>6 x 0</span>
-                        <span>5 x 2</span>
-                        <span>6 x 1</span>
-                        <span>7 x 0</span>
-                        <span>4 x 4</span>
-                        <span>5 x 3</span>
-                        <span>6 x 2</span>
-                        <span>7 x 1</span>
-                        <span>8 x 0</span>
-                        <span>9 x 0</span>
-                        <span>8 x 1</span>
-                        <span>5 x 4</span>
-                        <span>7 x 2</span>
-                        <span>6 x 3</span>
-                      </div>
-                    </td>
-                    <td><span class="bonus-pill">5</span></td>
-                  </tr>
-                  <tr>
-                    <td>Qualquer outro placar exato nao listado</td>
-                    <td><span class="bonus-pill">5</span></td>
-                  </tr>
-                </tbody>
-              </table>
+            <article class="rules-card">
+              <p class="rules-card-label">
+                <svg class="rules-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C6 4 6 6 12 6s6-2 7.5-2a2.5 2.5 0 0 1 0 5H18"/><rect x="6" y="9" width="12" height="11" rx="2"/><path d="M12 9v11"/></svg>
+                Bônus por placar exato
+              </p>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>1×1</span>
+                  <span>1×0</span>
+                  <span>0×0</span>
+                  <span>2×1</span>
+                </div>
+                <span class="rules-pill is-zero">+0</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>2×0</span>
+                  <span>2×2</span>
+                </div>
+                <span class="rules-pill">+1</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>3×1</span>
+                  <span>3×0</span>
+                  <span>3×2</span>
+                </div>
+                <span class="rules-pill">+2</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>4×0</span>
+                  <span>4×1</span>
+                  <span>3×3</span>
+                </div>
+                <span class="rules-pill">+3</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>4×2</span>
+                  <span>5×0</span>
+                  <span>5×1</span>
+                </div>
+                <span class="rules-pill">+4</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <div class="rules-chips">
+                  <span>4×3</span>
+                  <span>6×0</span>
+                  <span>5×2</span>
+                  <span>6×1</span>
+                  <span>7×0</span>
+                  <span>4×4</span>
+                  <span>5×3</span>
+                  <span>6×2</span>
+                  <span>7×1</span>
+                  <span>8×0</span>
+                  <span>9×0</span>
+                  <span>8×1</span>
+                  <span>5×4</span>
+                  <span>7×2</span>
+                  <span>6×3</span>
+                </div>
+                <span class="rules-pill">+5</span>
+              </div>
+
+              <div class="rules-bonus-row">
+                <span class="rules-bonus-other">Qualquer outro placar exato não listado</span>
+                <span class="rules-pill">+5</span>
+              </div>
+
+              <p class="rules-bonus-note">Bônus somado à pontuação base do acerto.</p>
             </article>
 
-            <article class="rules-block">
-              <h3>Desempate</h3>
-              <ol class="plain-list">
-                <li>Mais placares exatos.</li>
-                <li>Mais acertos de vencedor ou empate.</li>
-                <li>Acerto do campeão.</li>
+            <article class="rules-card">
+              <p class="rules-card-label">
+                <svg class="rules-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9v1a6 6 0 0 0 12 0V9"/><path d="M4 9h16"/><path d="M12 15v6"/><path d="M8 21h8"/></svg>
+                Desempate
+              </p>
+
+              <ol class="rules-tiebreak-list">
+                <li class="rules-tiebreak-item">
+                  <span>1</span>
+                  Mais placares exatos
+                </li>
+                <li class="rules-tiebreak-item">
+                  <span>2</span>
+                  Mais acertos de vencedor ou empate
+                </li>
+                <li class="rules-tiebreak-item">
+                  <span>3</span>
+                  Acerto do campeão
+                </li>
               </ol>
             </article>
           </div>
