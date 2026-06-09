@@ -41,7 +41,7 @@
     profile: { id: "", name: "", isAdmin: false },
     expandedGames: new Set(),
     expandedRankings: new Set(),
-    expandedExtras: false,
+    activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
     filters: { phase: "todos", status: "todos" }
@@ -106,7 +106,7 @@
     els.rankingList?.addEventListener("click", handleRankingListClick);
     els.adminGamesList?.addEventListener("submit", handleResultSubmit);
     els.extrasForm?.addEventListener("submit", handleExtrasSubmit);
-    els.extrasVisibleList?.addEventListener("click", handleExtrasListClick);
+    els.extrasPreview?.addEventListener("click", handleExtrasPreviewClick);
     [els.extraChampion, els.extraRunnerUp, els.extraSemi3, els.extraSemi4].forEach((select) => {
       select?.addEventListener("change", renderExtras);
     });
@@ -708,10 +708,10 @@
 
     if (els.extrasPreview) {
       els.extrasPreview.innerHTML = [
-        extraChip("Campeão", draft.championCode),
-        extraChip("Vice", draft.runnerUpCode),
-        extraChip("Semifinalista", draft.semifinalist3Code),
-        extraChip("Semifinalista", draft.semifinalist4Code)
+        extraChip("Campeão", draft.championCode, "champion"),
+        extraChip("Vice-campeão", draft.runnerUpCode, "runnerUp"),
+        extraChip("Semifinalista", draft.semifinalist3Code, "semifinalists"),
+        extraChip("Semifinalista", draft.semifinalist4Code, "semifinalists")
       ].join("");
     }
 
@@ -772,9 +772,22 @@
       .sort((a, b) => String(a.short_name || a.code).localeCompare(String(b.short_name || b.code), "pt-BR"));
   }
 
-  function extraChip(label, code) {
+  function extraChip(label, code, revealKey) {
     if (!code) {
       return `<div class="extra-chip is-empty"><strong>${escapeHtml(label)}</strong><span>Selecione</span></div>`;
+    }
+
+    if (canRevealExtraGuesses()) {
+      const expanded = state.activeExtraReveal === revealKey;
+      return `
+        <button class="extra-chip extra-chip-button" type="button" data-extra-reveal="${escapeAttr(revealKey)}" aria-expanded="${expanded ? "true" : "false"}">
+          ${renderScoreFlag(code)}
+          <div>
+            <strong>${escapeHtml(teamName(code))}</strong>
+            <span>${escapeHtml(label)}</span>
+          </div>
+        </button>
+      `;
     }
 
     return `
@@ -797,6 +810,10 @@
 
   function extrasReady() {
     return state.mode !== "supabase" || (state.extraStatus.loaded && !state.extrasStatusError && !state.extrasLoadError);
+  }
+
+  function canRevealExtraGuesses() {
+    return extrasReady() && !extrasEditable();
   }
 
   function extraCutoffDate() {
@@ -880,44 +897,56 @@
     const extras = state.extraGuesses
       .filter((extra) => extra.championCode && extra.runnerUpCode)
       .sort((a, b) => a.participantName.localeCompare(b.participantName, "pt-BR"));
-    const panelId = "extras-guesses-panel";
 
     if (extras.length === 0) {
       return `<div class="visible-guesses extras-guesses"><strong>Palpites extras</strong><span>Nenhum palpite extra salvo.</span></div>`;
     }
 
-    const results = getExtraResults();
+    if (!state.activeExtraReveal) {
+      return `<div class="extras-reveal-empty">Clique em Campeão, Vice-campeão ou Semifinalista para ver os palpites extras.</div>`;
+    }
 
+    const config = extraRevealConfig(state.activeExtraReveal);
     return `
-      <details class="visible-guesses extras-guesses" ${state.expandedExtras ? "open" : ""}>
-        <summary class="guesses-toggle" data-toggle-extras aria-controls="${panelId}">
-          <span class="label-closed">Ver extras (${extras.length})</span>
-          <span class="label-open">Ocultar extras (${extras.length})</span>
-        </summary>
-        <div id="${panelId}" class="guesses-panel">
-          <div class="extra-guess-row extra-guess-head">
-            <span>Participante</span>
-            <span>Campeão</span>
-            <span>Vice</span>
-            <span>Outros semis</span>
-            <span>Pontos</span>
-          </div>
-          ${extras.map((extra) => {
-            const score = calculateExtraScore(extra, results);
-            const points = score.available ? formatPoints(score.points) : "-";
-            return `
-              <div class="extra-guess-row">
-                <span class="guess-name">${escapeHtml(extra.participantName)}</span>
-                <span>${extraTeamPill(extra.championCode)}</span>
-                <span>${extraTeamPill(extra.runnerUpCode)}</span>
-                <span class="extra-semis">${[extra.semifinalist3Code, extra.semifinalist4Code].map(extraTeamPill).join("")}</span>
-                <span class="guess-points">${points}</span>
-              </div>
-            `;
-          }).join("")}
+      <section class="extras-reveal-panel" aria-live="polite">
+        <div class="extras-reveal-heading">
+          <strong>${escapeHtml(config.title)}</strong>
+          <span>${extras.length} participantes</span>
         </div>
-      </details>
+        <div class="extras-reveal-list">
+          ${extras.map((extra) => `
+            <div class="extras-reveal-row">
+              <span class="guess-name">${escapeHtml(extra.participantName)}</span>
+              <span class="${config.kind === "semifinalists" ? "extra-semis" : ""}">${config.render(extra)}</span>
+            </div>
+          `).join("")}
+        </div>
+      </section>
     `;
+  }
+
+  function extraRevealConfig(kind) {
+    if (kind === "runnerUp") {
+      return {
+        kind,
+        title: "Vice-campeão",
+        render: (extra) => extraTeamPill(extra.runnerUpCode)
+      };
+    }
+
+    if (kind === "semifinalists") {
+      return {
+        kind,
+        title: "Semifinalistas",
+        render: (extra) => [extra.semifinalist3Code, extra.semifinalist4Code].map(extraTeamPill).join("")
+      };
+    }
+
+    return {
+      kind: "champion",
+      title: "Campeão",
+      render: (extra) => extraTeamPill(extra.championCode)
+    };
   }
 
   function extraTeamPill(code) {
@@ -1258,14 +1287,15 @@
     renderGames();
   }
 
-  function handleExtrasListClick(event) {
-    const toggle = event.target.closest("[data-toggle-extras]");
+  function handleExtrasPreviewClick(event) {
+    const toggle = event.target.closest("[data-extra-reveal]");
     if (!toggle) {
       return;
     }
 
     event.preventDefault();
-    state.expandedExtras = !state.expandedExtras;
+    const key = toggle.dataset.extraReveal;
+    state.activeExtraReveal = state.activeExtraReveal === key ? "" : key;
     renderExtras();
   }
 
