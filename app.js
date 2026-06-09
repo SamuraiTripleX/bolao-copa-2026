@@ -3,7 +3,6 @@
 
   const STORAGE_KEY = "bolao-copa-2026:v1";
   const CUTOFF_MINUTES = 5;
-  const EXTRA_LOCK_AT = "2026-06-18T13:00:00-03:00";
   const fallbackCountries = [
     { code: "BRA", short_name: "Brasil" },
     { code: "FRA", short_name: "Franca" },
@@ -35,6 +34,8 @@
     guesses: [],
     extraGuess: null,
     extraGuesses: [],
+    extraStatus: { closesAt: "", cutoffAt: "", locked: false, loaded: false },
+    extrasStatusError: "",
     extrasLoadError: "",
     fixtureSource: "exemplo",
     profile: { id: "", name: "", isAdmin: false },
@@ -61,6 +62,7 @@
     await loadCountries();
     await loadGames();
     await loadGuesses({ silent: true });
+    await loadExtraStatus({ silent: true });
     await loadExtraGuesses({ silent: true });
     activateView(canUseProfile() ? "palpites" : "login");
     state.bootstrapped = true;
@@ -147,6 +149,7 @@
       state.session = session;
       await loadProfile();
       await loadGuesses({ silent: true });
+      await loadExtraStatus({ silent: true });
       await loadExtraGuesses({ silent: true });
 
       if (state.bootstrapped) {
@@ -270,6 +273,35 @@
     }
 
     state.guesses = mergeGuessRows(guesses);
+    return true;
+  }
+
+  async function loadExtraStatus(options = {}) {
+    state.extrasStatusError = "";
+
+    if (state.mode !== "supabase" || !state.client) {
+      state.extraStatus = { closesAt: "", cutoffAt: "", locked: false, loaded: true };
+      return true;
+    }
+
+    const { data, error } = await state.client.rpc("extras_status");
+    if (error) {
+      console.error(error);
+      state.extraStatus = { closesAt: "", cutoffAt: "", locked: false, loaded: false };
+      state.extrasStatusError = shortError(error);
+      if (!options.silent) {
+        showToast(`NÃ£o consegui carregar prazo dos extras: ${state.extrasStatusError}`);
+      }
+      return false;
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    state.extraStatus = {
+      closesAt: row?.extras_fecha_em || "",
+      cutoffAt: row?.extras_bloqueio_em || "",
+      locked: Boolean(row?.extras_bloqueados),
+      loaded: true
+    };
     return true;
   }
 
@@ -501,7 +533,7 @@
       .filter((game) => getGameStatus(game) === "aberto")
       .map((game) => cutoffDate(game.startsAt).getTime())
       .filter((time) => Number.isFinite(time) && time > now);
-    const extraCutoff = extraCutoffDate().getTime();
+    const extraCutoff = extraCutoffDate()?.getTime();
     const extraCutoffs = extrasEditable() && extraCutoff > now ? [extraCutoff] : [];
     const nextCutoff = [...gameCutoffs, ...extraCutoffs].sort((a, b) => a - b)[0];
     const delay = nextCutoff
@@ -517,6 +549,7 @@
     }
 
     await loadGuesses({ silent: true });
+    await loadExtraStatus({ silent: true });
     await loadExtraGuesses({ silent: true });
     render();
     scheduleDeadlineWatcher();
@@ -649,7 +682,8 @@
 
     const draft = currentExtraDraft();
     const editable = extrasEditable();
-    const disabled = !canUseProfile() || !editable;
+    const ready = extrasReady();
+    const disabled = !canUseProfile() || !editable || !ready;
 
     updateCountrySelect(els.extraChampion, draft.championCode, [
       draft.runnerUpCode,
@@ -690,14 +724,14 @@
     if (!els.extrasStatus) return;
     if (!canUseProfile()) {
       els.extrasStatus.textContent = "Entre com o convite para salvar seus extras.";
+    } else if (!ready) {
+      els.extrasStatus.textContent = "Extras precisam do SQL novo no Supabase.";
     } else if (!editable) {
       els.extrasStatus.textContent = "Extras bloqueados. Palpites liberados.";
-    } else if (state.extrasLoadError) {
-      els.extrasStatus.textContent = "Extras precisam do SQL novo no Supabase.";
     } else if (state.extraGuess?.updatedAt) {
-      els.extrasStatus.textContent = `Salvo em ${formatDateTime(state.extraGuess.updatedAt)}. Fecha ${formatDateTime(extraCutoffDate())}.`;
+      els.extrasStatus.textContent = `Salvo em ${formatDateTime(state.extraGuess.updatedAt)}. Fecha ${extraCutoffLabel()}.`;
     } else {
-      els.extrasStatus.textContent = `Escolha quatro seleções diferentes. Fecha ${formatDateTime(extraCutoffDate())}.`;
+      els.extrasStatus.textContent = `Escolha quatro seleções diferentes. Fecha ${extraCutoffLabel()}.`;
     }
 
     if (els.extrasVisibleList) {
@@ -755,11 +789,23 @@
   }
 
   function extrasEditable() {
-    return new Date() < extraCutoffDate();
+    if (state.mode !== "supabase") {
+      return true;
+    }
+    return state.extraStatus.loaded && !state.extraStatus.locked;
+  }
+
+  function extrasReady() {
+    return state.mode !== "supabase" || (state.extraStatus.loaded && !state.extrasStatusError && !state.extrasLoadError);
   }
 
   function extraCutoffDate() {
-    return cutoffDate(EXTRA_LOCK_AT);
+    return state.extraStatus.cutoffAt ? new Date(state.extraStatus.cutoffAt) : null;
+  }
+
+  function extraCutoffLabel() {
+    const value = extraCutoffDate();
+    return value ? formatDateTime(value) : "prazo não carregado";
   }
 
   function renderTeam(code) {
@@ -823,6 +869,10 @@
   }
 
   function renderVisibleExtraGuesses() {
+    if (!extrasReady()) {
+      return "";
+    }
+
     if (extrasEditable()) {
       return "";
     }
@@ -1156,6 +1206,7 @@
     };
     els.authInvite.value = "";
     await loadGuesses({ silent: true });
+    await loadExtraStatus({ silent: true });
     await loadExtraGuesses({ silent: true });
     activateView("palpites");
     render();
@@ -1316,6 +1367,7 @@
       await saveResult(game, { goalsA, goalsB });
       await loadGames();
       await loadGuesses();
+      await loadExtraStatus();
       await loadExtraGuesses();
       render();
       showToast("Resultado salvo.");
@@ -1329,6 +1381,11 @@
 
     if (!canUseProfile()) {
       showToast("Entre com o convite.");
+      return;
+    }
+
+    if (!extrasReady()) {
+      showToast("Rode o SQL dos extras no Supabase.");
       return;
     }
 

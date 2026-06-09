@@ -931,22 +931,34 @@ button.guess-points[aria-expanded="true"] {
 }
 
 .ranking-score-button {
-  display: grid;
-  place-items: center;
-  min-width: 62px;
-  padding: 4px 8px;
-  border: 1px solid rgba(14, 108, 61, 0.18);
-  border-radius: 8px;
-  background: #e8f5ee;
+  display: inline-grid;
+  place-items: end;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   color: var(--green-dark);
   cursor: pointer;
   font: inherit;
+  text-align: right;
 }
 
 .ranking-score-button:hover,
 .ranking-score-button[aria-expanded="true"] {
-  border-color: var(--green);
-  background: #d9f0e5;
+  background: transparent;
+}
+
+.ranking-score-button:focus-visible {
+  outline: 3px solid rgba(11, 127, 73, 0.18);
+  outline-offset: 3px;
+}
+
+.ranking-score-button:hover .card-score-value,
+.ranking-score-button[aria-expanded="true"] .card-score-value {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 .card-score-value {

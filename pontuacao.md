@@ -161,6 +161,8 @@ Pontuacao maxima dos extras:
 
 O app apura esses pontos a partir dos jogos cadastrados como `Semifinal` e `Final` quando eles estiverem com status `finalizado`.
 
-Os palpites extras fecham em 18/06/2026 as 12:55, cinco minutos antes do primeiro jogo da segunda rodada, marcado para 18/06/2026 as 13:00.
+Os palpites extras fecham cinco minutos antes do horario configurado no Supabase em `bolao_config.extras_fecha_em`.
+
+No padrao atual, esse horario base e 18/06/2026 as 13:00. Portanto, o fechamento fica em 18/06/2026 as 12:55.
 
 Depois desse horario, os palpites extras dos outros participantes ficam visiveis e novas edicoes ficam bloqueadas.
