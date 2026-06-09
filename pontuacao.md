@@ -14,8 +14,9 @@ Ordem atual de avaliacao:
 | Acertou o vencedor e o saldo de gols | 6 |
 | Acertou o vencedor e os gols de um time | 5 |
 | Acertou empate, mas nao o placar exato | 5 |
-| Acertou apenas o vencedor e o total de gols da partida | 5 |
-| Acertou apenas o vencedor | 4 |
+| Acertou o vencedor e o total de gols da partida | 5 |
+| Acertou o vencedor | 4 |
+| Acertou apenas os gols de um time | 1 |
 | Acertou apenas o total de gols da partida | 1 |
 | Nao acertou nada | 0 |
 
@@ -66,8 +67,8 @@ Brasil 2 x 1 Franca
 | 2 x 1 | Placar exato | 10 + bonus raro |
 | 3 x 2 | Vencedor + saldo | 6 |
 | 2 x 0 | Vencedor + gols de um time | 5 |
-| 3 x 0 | Apenas vencedor + total de gols | 5 |
-| 4 x 2 | Apenas vencedor | 4 |
+| 3 x 0 | Vencedor + total de gols | 5 |
+| 4 x 2 | Vencedor | 4 |
 | 1 x 2 | Total de gols, sem resultado | 1 |
 | 0 x 2 | Errou tudo | 0 |
 
@@ -75,9 +76,18 @@ Observacoes:
 
 - Acertar o vencedor vale 4 pontos; se tambem acertar os gols de um time, soma 1 ponto e vira 5.
 - O ponto por total de gols nao entra em placar exato.
-- O ponto por total de gols so soma como extra no caso de "apenas vencedor".
+- O ponto por total de gols so soma como extra no caso de "vencedor".
 - Se a pessoa erra o resultado, mas acerta o total de gols da partida, recebe 1 ponto.
-- Acertar os gols de um time sem acertar o resultado nao pontua mais sozinho.
+- Se a pessoa erra o resultado, mas acerta os gols de um dos times, recebe 1 ponto.
+
+Exemplo do ponto por gols de um time sem resultado:
+
+```text
+Placar real: Brasil 0 x 1 Franca
+Palpite: Brasil 1 x 1 Franca
+```
+
+Nesse caso, o participante errou o resultado, mas acertou que a Franca fez 1 gol. Entao recebe 1 ponto.
 
 ## Bonus por placar exato raro
 

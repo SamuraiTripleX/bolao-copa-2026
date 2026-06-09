@@ -646,6 +646,38 @@ select:disabled {
   font-weight: 900;
 }
 
+button.guess-points {
+  padding: 4px 8px;
+  border: 1px solid rgba(14, 108, 61, 0.22);
+  border-radius: 8px;
+  background: #e8f5ee;
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+button.guess-points:hover,
+button.guess-points[aria-expanded="true"] {
+  border-color: var(--green);
+  background: #d9f0e5;
+}
+
+.score-reason {
+  grid-column: 1 / -1;
+  padding: 9px 10px;
+  border: 1px solid rgba(14, 108, 61, 0.14);
+  border-radius: 8px;
+  background: #f3fbf7;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.score-reason[hidden] {
+  display: none;
+}
+
 .empty-state {
   border: 1px dashed var(--line);
   border-radius: 8px;

@@ -574,12 +574,16 @@
             <span>Pontos</span>
           </div>
           ${guesses.map((guess) => {
-            const points = game.result ? formatPoints(calculateScore(game, guess).points) : "-";
+            const score = game.result ? calculateScore(game, guess) : null;
+            const points = score ? formatPoints(score.points) : "-";
             return `
               <div class="visible-guess-row">
                 <span class="guess-name">${escapeHtml(guess.participantName)}</span>
                 <span class="guess-score">${guess.goalsA} x ${guess.goalsB}</span>
-                <span class="guess-points">${points}</span>
+                ${score ? `
+                  <button class="guess-points" type="button" data-score-toggle aria-expanded="false" aria-label="Ver explicação da pontuação">${points}</button>
+                  <div class="score-reason" hidden>${escapeHtml(score.reason)}</div>
+                ` : `<span class="guess-points">${points}</span>`}
               </div>
             `;
           }).join("")}
@@ -823,6 +827,20 @@
   }
 
   function handleGamesListClick(event) {
+    const scoreToggle = event.target.closest("[data-score-toggle]");
+    if (scoreToggle) {
+      event.preventDefault();
+      const row = scoreToggle.closest(".visible-guess-row");
+      const reason = row?.querySelector(".score-reason");
+      if (!reason) return;
+
+      const expanded = scoreToggle.getAttribute("aria-expanded") === "true";
+      scoreToggle.setAttribute("aria-expanded", String(!expanded));
+      reason.hidden = expanded;
+      row.classList.toggle("is-score-open", !expanded);
+      return;
+    }
+
     const toggle = event.target.closest("[data-toggle-guesses]");
     if (!toggle) {
       return;
@@ -1043,16 +1061,118 @@
     else if (result && sameDiff) base = 6;
     else if (result && oneTeamGoals) base = 5;
     else if (result) base = 4;
-    else if (totalGoals) base = 1;
+    else if (oneTeamGoals || totalGoals) base = 1;
 
     if (!exact && result && realResult !== "D" && totalGoals && base === 4) {
       base += 1;
     }
 
     const rarity = exact ? getExoticBonus(guessA, guessB) : 0;
-    const points = Math.floor((base + rarity) * game.multiplier);
+    const multiplier = Number(game.multiplier || 1);
+    const points = Math.floor((base + rarity) * multiplier);
+    const reason = scoreReason(game, {
+      realA,
+      realB,
+      guessA,
+      guessB,
+      realResult,
+      exact,
+      result,
+      sameDiff,
+      oneTeamGoals,
+      totalGoals,
+      base,
+      rarity,
+      multiplier
+    }, points);
 
-    return { points, exact, result, totalGoals };
+    return { points, exact, result, totalGoals, reason };
+  }
+
+  function scoreReason(game, score, points) {
+    const multiplierNote = score.multiplier === 1
+      ? ""
+      : ` Multiplicador ${formatMultiplier(score.multiplier)} aplicado: ${formatPoints(points)} pts.`;
+
+    if (score.exact) {
+      const rarityNote = score.rarity > 0 ? ` + ${score.rarity} de bônus por placar raro` : "";
+      return `Placar exato: 10 pontos${rarityNote}.${multiplierNote}`;
+    }
+
+    if (score.result && score.realResult === "D") {
+      return `Acertou o empate. Empate não exato vale 5 pontos.${multiplierNote}`;
+    }
+
+    if (score.result && score.sameDiff) {
+      return `Acertou o vencedor e o saldo de gols. Base: 6 pontos.${multiplierNote}`;
+    }
+
+    if (score.result && score.oneTeamGoals) {
+      return `Acertou o vencedor e o número de gols ${matchedTeamGoalsText(game, score)}. Base: 5 pontos.${multiplierNote}`;
+    }
+
+    if (score.result && score.totalGoals) {
+      return `Acertou o vencedor e o total de gols da partida (${score.realA + score.realB}). Base: 5 pontos.${multiplierNote}`;
+    }
+
+    if (score.result) {
+      return `Acertou o vencedor. Base: 4 pontos.${multiplierNote}`;
+    }
+
+    if (score.oneTeamGoals) {
+      return `Acertou o número de gols ${matchedTeamGoalsText(game, score)}. Base: 1 ponto.${multiplierNote}`;
+    }
+
+    if (score.totalGoals) {
+      return `Acertou o total de gols da partida (${score.realA + score.realB}). Base: 1 ponto.${multiplierNote}`;
+    }
+
+    return `Não acertou vencedor, empate, gols de time nem total de gols.`;
+  }
+
+  function matchedTeamGoalsText(game, score) {
+    const matches = [];
+    if (score.realA === score.guessA) {
+      matches.push(teamArticle(game.teamA));
+    }
+    if (score.realB === score.guessB) {
+      matches.push(teamArticle(game.teamB));
+    }
+    return matches.join(" e ");
+  }
+
+  function teamArticle(code) {
+    const articles = {
+      ARG: "da Argentina",
+      AUS: "da Austrália",
+      AUT: "da Áustria",
+      BEL: "da Bélgica",
+      BRA: "do Brasil",
+      CAN: "do Canadá",
+      COL: "da Colômbia",
+      CRO: "da Croácia",
+      DEN: "da Dinamarca",
+      ECU: "do Equador",
+      EGY: "do Egito",
+      ENG: "da Inglaterra",
+      ESP: "da Espanha",
+      FRA: "da França",
+      GER: "da Alemanha",
+      ITA: "da Itália",
+      JPN: "do Japão",
+      MEX: "do México",
+      MAR: "do Marrocos",
+      NED: "dos Países Baixos",
+      NOR: "da Noruega",
+      PAR: "do Paraguai",
+      POL: "da Polônia",
+      POR: "de Portugal",
+      SEN: "do Senegal",
+      SUI: "da Suíça",
+      USA: "dos EUA",
+      URU: "do Uruguai"
+    };
+    return articles[code] || `de ${teamName(code)}`;
   }
 
   function resultType(a, b) {
