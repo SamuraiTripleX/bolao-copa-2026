@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bolão Copa 2026</title>
-    <link rel="stylesheet" href="styles.css?v=20260609-3">
+    <link rel="stylesheet" href="styles.css?v=20260609-4">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="supabase-config.js?v=20260609-3" defer></script>
-    <script src="app.js?v=20260609-3" defer></script>
+    <script src="supabase-config.js?v=20260609-4" defer></script>
+    <script src="app.js?v=20260609-4" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -16,13 +16,14 @@
         <div>
           <h1>Bolão Copa 2026</h1>
           <p id="connectionStatus">Carregando...</p>
-          <p class="app-version">Versão 20260609-3</p>
+          <p class="app-version">Versão 20260609-4</p>
         </div>
       </div>
 
       <nav class="tabs" aria-label="Views do bolão">
         <button id="loginTab" class="tab is-active" type="button" data-view="login">Login</button>
         <button class="tab" type="button" data-view="palpites">Palpites</button>
+        <button class="tab" type="button" data-view="extras">Extras</button>
         <button class="tab" type="button" data-view="ranking">Ranking</button>
         <button id="adminTab" class="tab" type="button" data-view="admin" hidden>Resultados</button>
         <button class="tab" type="button" data-view="regras">Regras</button>
@@ -99,6 +100,62 @@
           </section>
 
           <div id="gamesList" class="games-list" aria-live="polite"></div>
+        </section>
+
+        <section id="view-extras" class="view" aria-labelledby="extrasTitle">
+          <div class="view-header">
+            <div>
+              <h2 id="extrasTitle">Extras</h2>
+              <p>Palpites de seleções para campeão, vice e semifinalistas.</p>
+            </div>
+          </div>
+
+          <section class="panel extras-panel">
+            <form id="extrasForm" class="extras-form">
+              <div class="extras-grid">
+                <label class="field">
+                  <span>Campeão</span>
+                  <select id="extraChampion" name="championCode" aria-label="Campeão"></select>
+                </label>
+                <label class="field">
+                  <span>Vice-campeão</span>
+                  <select id="extraRunnerUp" name="runnerUpCode" aria-label="Vice-campeão"></select>
+                </label>
+                <label class="field">
+                  <span>Outro semifinalista</span>
+                  <select id="extraSemi3" name="semifinalist3Code" aria-label="Outro semifinalista 1"></select>
+                </label>
+                <label class="field">
+                  <span>Outro semifinalista</span>
+                  <select id="extraSemi4" name="semifinalist4Code" aria-label="Outro semifinalista 2"></select>
+                </label>
+              </div>
+
+              <div id="extrasPreview" class="extras-preview"></div>
+
+              <div class="card-actions">
+                <div id="extrasStatus" class="game-note"></div>
+                <button class="button button-primary" type="submit">Salvar extras</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="rules-block extras-rules">
+            <h3>Pontuação dos extras</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Acerto</th>
+                  <th>Pontos</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Campeão</td><td>20</td></tr>
+                <tr><td>Vice-campeão</td><td>12</td></tr>
+                <tr><td>Cada semifinalista</td><td>5</td></tr>
+              </tbody>
+            </table>
+          </section>
         </section>
 
         <section id="view-ranking" class="view" aria-labelledby="rankingTitle">

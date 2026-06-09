@@ -32,6 +32,9 @@
     countries: new Map(),
     games: [],
     guesses: [],
+    extraGuess: null,
+    extraGuesses: [],
+    extrasLoadError: "",
     fixtureSource: "exemplo",
     profile: { id: "", name: "", isAdmin: false },
     expandedGames: new Set(),
@@ -55,6 +58,7 @@
     await loadCountries();
     await loadGames();
     await loadGuesses({ silent: true });
+    await loadExtraGuesses({ silent: true });
     activateView(canUseProfile() ? "palpites" : "login");
     state.bootstrapped = true;
     render();
@@ -66,7 +70,8 @@
       "connectionStatus", "loginTab", "authForm", "authName", "authInvite", "signOutButton",
       "totalGames", "savedGuesses", "openGames", "finishedGames", "nextGame",
       "fixtureSource", "phaseFilter", "statusFilter", "gamesList",
-      "rankingList", "adminTab", "adminGamesList", "toast"
+      "rankingList", "adminTab", "adminGamesList", "extrasForm", "extraChampion",
+      "extraRunnerUp", "extraSemi3", "extraSemi4", "extrasPreview", "extrasStatus", "toast"
     ];
 
     ids.forEach((id) => {
@@ -93,6 +98,10 @@
     els.gamesList?.addEventListener("submit", handleGuessSubmit);
     els.gamesList?.addEventListener("click", handleGamesListClick);
     els.adminGamesList?.addEventListener("submit", handleResultSubmit);
+    els.extrasForm?.addEventListener("submit", handleExtrasSubmit);
+    [els.extraChampion, els.extraRunnerUp, els.extraSemi3, els.extraSemi4].forEach((select) => {
+      select?.addEventListener("change", renderExtras);
+    });
   }
 
   function handleFatalError(error) {
@@ -132,6 +141,7 @@
       state.session = session;
       await loadProfile();
       await loadGuesses({ silent: true });
+      await loadExtraGuesses({ silent: true });
 
       if (state.bootstrapped) {
         if (canUseProfile() && document.getElementById("view-login")?.classList.contains("is-active")) {
@@ -149,16 +159,21 @@
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       state.profile = saved.profile || state.profile;
       state.guesses = Array.isArray(saved.guesses) ? saved.guesses : [];
+      state.extraGuess = saved.extraGuess || null;
+      state.extraGuesses = state.extraGuess ? [state.extraGuess] : [];
     } catch (_error) {
       state.profile = { id: "", name: "", isAdmin: false };
       state.guesses = [];
+      state.extraGuess = null;
+      state.extraGuesses = [];
     }
   }
 
   function saveLocalState() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       profile: state.profile,
-      guesses: state.guesses
+      guesses: state.guesses,
+      extraGuess: state.extraGuess
     }));
   }
 
@@ -249,6 +264,58 @@
     return true;
   }
 
+  async function loadExtraGuesses(options = {}) {
+    state.extrasLoadError = "";
+
+    if (state.mode !== "supabase" || !state.session || !state.profile.id) {
+      if (state.mode === "supabase") {
+        state.extraGuess = null;
+        state.extraGuesses = [];
+      }
+      return true;
+    }
+
+    const [visibleResult, ownResult] = await Promise.all([
+      state.client.rpc("palpites_extras_visiveis"),
+      state.client
+        .from("palpites_extras")
+        .select("id,participante_id,campeao_code,vice_code,semifinalista_3_code,semifinalista_4_code,updated_at")
+        .eq("participante_id", state.profile.id)
+        .maybeSingle()
+    ]);
+
+    const extras = [];
+    let loadedAnything = false;
+
+    if (visibleResult.error) {
+      console.error(visibleResult.error);
+    } else {
+      loadedAnything = true;
+      extras.push(...(visibleResult.data || []).map((row) => mapExtraGuessRow(row, row.participante_nome)));
+    }
+
+    if (ownResult.error) {
+      console.error(ownResult.error);
+    } else if (ownResult.data) {
+      loadedAnything = true;
+      extras.push(mapExtraGuessRow(ownResult.data, state.profile.name));
+    }
+
+    if (!loadedAnything) {
+      state.extraGuess = null;
+      state.extraGuesses = [];
+      state.extrasLoadError = shortError(visibleResult.error || ownResult.error);
+      if (!options.silent) {
+        showToast(`NÃ£o consegui carregar extras: ${state.extrasLoadError}`);
+      }
+      return false;
+    }
+
+    state.extraGuesses = mergeExtraGuessRows(extras);
+    state.extraGuess = state.extraGuesses.find((extra) => extra.participantId === state.profile.id) || null;
+    return true;
+  }
+
   function mapGuessRow(guess, participantName) {
     return {
       id: guess.id,
@@ -294,6 +361,41 @@
 
   function hasRealParticipantName(guess) {
     return Boolean(guess?.participantName && guess.participantName !== "Participante");
+  }
+
+  function mapExtraGuessRow(extra, participantName) {
+    return {
+      id: extra.id,
+      participantId: extra.participante_id,
+      participantName: participantName || "Participante",
+      championCode: extra.campeao_code,
+      runnerUpCode: extra.vice_code,
+      semifinalist3Code: extra.semifinalista_3_code,
+      semifinalist4Code: extra.semifinalista_4_code,
+      updatedAt: extra.updated_at
+    };
+  }
+
+  function mergeExtraGuessRows(extras) {
+    const rows = new Map();
+    extras.forEach((extra) => {
+      const key = extra.participantId || extra.id;
+      const current = rows.get(key);
+      rows.set(key, mergeExtraGuessData(current, extra));
+    });
+    return [...rows.values()];
+  }
+
+  function mergeExtraGuessData(current, next) {
+    if (!current) {
+      return next;
+    }
+
+    if (hasRealParticipantName(current) && !hasRealParticipantName(next)) {
+      return { ...next, participantName: current.participantName };
+    }
+
+    return next;
   }
 
   async function loadProfile() {
@@ -375,6 +477,7 @@
     renderPhaseFilter();
     renderSummary();
     renderGames();
+    renderExtras();
     renderRanking();
     renderAdmin();
   }
@@ -532,6 +635,117 @@
     `;
   }
 
+  function renderExtras() {
+    if (!els.extrasForm) return;
+
+    const draft = currentExtraDraft();
+    const editable = extrasEditable();
+    const disabled = !canUseProfile() || !editable;
+
+    updateCountrySelect(els.extraChampion, draft.championCode, [
+      draft.runnerUpCode,
+      draft.semifinalist3Code,
+      draft.semifinalist4Code
+    ], disabled);
+    updateCountrySelect(els.extraRunnerUp, draft.runnerUpCode, [
+      draft.championCode,
+      draft.semifinalist3Code,
+      draft.semifinalist4Code
+    ], disabled);
+    updateCountrySelect(els.extraSemi3, draft.semifinalist3Code, [
+      draft.championCode,
+      draft.runnerUpCode,
+      draft.semifinalist4Code
+    ], disabled);
+    updateCountrySelect(els.extraSemi4, draft.semifinalist4Code, [
+      draft.championCode,
+      draft.runnerUpCode,
+      draft.semifinalist3Code
+    ], disabled);
+
+    if (els.extrasPreview) {
+      els.extrasPreview.innerHTML = [
+        extraChip("Campeão", draft.championCode),
+        extraChip("Vice", draft.runnerUpCode),
+        extraChip("Semifinalista", draft.semifinalist3Code),
+        extraChip("Semifinalista", draft.semifinalist4Code)
+      ].join("");
+    }
+
+    const button = els.extrasForm.querySelector("button[type='submit']");
+    if (button) {
+      button.disabled = disabled;
+      button.textContent = state.extraGuess ? "Atualizar extras" : "Salvar extras";
+    }
+
+    if (!els.extrasStatus) return;
+    if (!canUseProfile()) {
+      els.extrasStatus.textContent = "Entre com o convite para salvar seus extras.";
+    } else if (!editable) {
+      els.extrasStatus.textContent = "Extras bloqueados: semifinal/final já liberou pontuação.";
+    } else if (state.extrasLoadError) {
+      els.extrasStatus.textContent = "Extras precisam do SQL novo no Supabase.";
+    } else if (state.extraGuess?.updatedAt) {
+      els.extrasStatus.textContent = `Salvo em ${formatDateTime(state.extraGuess.updatedAt)}.`;
+    } else {
+      els.extrasStatus.textContent = "Escolha quatro seleções diferentes.";
+    }
+  }
+
+  function currentExtraDraft() {
+    return {
+      championCode: els.extraChampion?.value || state.extraGuess?.championCode || "",
+      runnerUpCode: els.extraRunnerUp?.value || state.extraGuess?.runnerUpCode || "",
+      semifinalist3Code: els.extraSemi3?.value || state.extraGuess?.semifinalist3Code || "",
+      semifinalist4Code: els.extraSemi4?.value || state.extraGuess?.semifinalist4Code || ""
+    };
+  }
+
+  function updateCountrySelect(select, currentValue, blockedCodes, disabled) {
+    if (!select) return;
+    select.innerHTML = renderCountryOptions(currentValue, blockedCodes);
+    select.value = currentValue || "";
+    select.disabled = disabled;
+  }
+
+  function renderCountryOptions(currentValue, blockedCodes) {
+    const blocked = new Set(blockedCodes.filter(Boolean));
+    const options = countryOptions();
+    return [
+      `<option value="">Selecione</option>`,
+      ...options.map((country) => {
+        const disabled = blocked.has(country.code) && country.code !== currentValue ? " disabled" : "";
+        return `<option value="${escapeAttr(country.code)}"${disabled}>${escapeHtml(country.short_name || country.code)}</option>`;
+      })
+    ].join("");
+  }
+
+  function countryOptions() {
+    return [...state.countries.values()]
+      .sort((a, b) => String(a.short_name || a.code).localeCompare(String(b.short_name || b.code), "pt-BR"));
+  }
+
+  function extraChip(label, code) {
+    if (!code) {
+      return `<div class="extra-chip is-empty"><strong>${escapeHtml(label)}</strong><span>Selecione</span></div>`;
+    }
+
+    return `
+      <div class="extra-chip">
+        ${renderScoreFlag(code)}
+        <div>
+          <strong>${escapeHtml(teamName(code))}</strong>
+          <span>${escapeHtml(label)}</span>
+        </div>
+      </div>
+    `;
+  }
+
+  function extrasEditable() {
+    const results = getExtraResults();
+    return !results.hasSemifinals && !results.hasFinal;
+  }
+
   function renderTeam(code) {
     return `
       <div class="team">
@@ -648,6 +862,11 @@
             <span class="stat-value">${row.games}</span>
             <span class="stat-label">Jogos</span>
           </div>
+          <div class="stat">
+            <span class="stat-icon">★</span>
+            <span class="stat-value">${formatPoints(row.extras)}</span>
+            <span class="stat-label">Extras</span>
+          </div>
         </div>
       </article>
     `).join("");
@@ -743,14 +962,7 @@
 
       const score = calculateScore(game, guess);
       const userKey = guess.participantId || "local";
-      const row = rows.get(userKey) || {
-        participantId: userKey,
-        name: guess.participantName || state.profile.name || "Participante",
-        points: 0,
-        exacts: 0,
-        results: 0,
-        games: 0
-      };
+      const row = rankingRow(rows, userKey, guess.participantName || state.profile.name || "Participante");
 
       row.points += score.points;
       row.exacts += score.exact ? 1 : 0;
@@ -759,11 +971,37 @@
       rows.set(userKey, row);
     });
 
+    const extraResults = getExtraResults();
+    state.extraGuesses.forEach((extra) => {
+      const score = calculateExtraScore(extra, extraResults);
+      if (!score.available && score.points === 0) {
+        return;
+      }
+
+      const userKey = extra.participantId || "local";
+      const row = rankingRow(rows, userKey, extra.participantName || state.profile.name || "Participante");
+      row.points += score.points;
+      row.extras += score.points;
+      rows.set(userKey, row);
+    });
+
     return [...rows.values()].sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       if (b.exacts !== a.exacts) return b.exacts - a.exacts;
       return b.results - a.results;
     });
+  }
+
+  function rankingRow(rows, key, name) {
+    return rows.get(key) || {
+      participantId: key,
+      name,
+      points: 0,
+      exacts: 0,
+      results: 0,
+      games: 0,
+      extras: 0
+    };
   }
 
   async function handleAuthSubmit(event) {
@@ -808,6 +1046,7 @@
     };
     els.authInvite.value = "";
     await loadGuesses({ silent: true });
+    await loadExtraGuesses({ silent: true });
     activateView("palpites");
     render();
     showToast("Dispositivo vinculado.");
@@ -822,6 +1061,8 @@
     state.session = null;
     state.profile = { id: "", name: "", isAdmin: false };
     state.guesses = [];
+    state.extraGuess = null;
+    state.extraGuesses = [];
     activateView("login");
     render();
   }
@@ -938,11 +1179,80 @@
       await saveResult(game, { goalsA, goalsB });
       await loadGames();
       await loadGuesses();
+      await loadExtraGuesses();
       render();
       showToast("Resultado salvo.");
     } finally {
       button.disabled = false;
     }
+  }
+
+  async function handleExtrasSubmit(event) {
+    event.preventDefault();
+
+    if (!canUseProfile()) {
+      showToast("Entre com o convite.");
+      return;
+    }
+
+    if (!extrasEditable()) {
+      showToast("Extras bloqueados.");
+      return;
+    }
+
+    const formData = new FormData(event.target);
+    const extra = {
+      championCode: String(formData.get("championCode") || ""),
+      runnerUpCode: String(formData.get("runnerUpCode") || ""),
+      semifinalist3Code: String(formData.get("semifinalist3Code") || ""),
+      semifinalist4Code: String(formData.get("semifinalist4Code") || "")
+    };
+
+    const validation = validateExtraGuess(extra);
+    if (validation) {
+      showToast(validation);
+      return;
+    }
+
+    const button = event.target.querySelector("button[type='submit']");
+    button.disabled = true;
+
+    try {
+      const savedExtra = await saveExtraGuess(extra);
+      mergeExtraGuessIntoState(savedExtra);
+      await loadExtraGuesses({ silent: true });
+      if (!state.extraGuess) {
+        mergeExtraGuessIntoState(savedExtra);
+      }
+      render();
+      showToast("Extras salvos.");
+    } catch (error) {
+      console.error(error);
+      await loadExtraGuesses({ silent: true });
+      render();
+      showToast(`NÃ£o consegui salvar extras: ${shortError(error)}`);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function validateExtraGuess(extra) {
+    const codes = [
+      extra.championCode,
+      extra.runnerUpCode,
+      extra.semifinalist3Code,
+      extra.semifinalist4Code
+    ];
+
+    if (codes.some((code) => !code)) {
+      return "Escolha campeão, vice e os outros 2 semifinalistas.";
+    }
+
+    if (new Set(codes).size !== codes.length) {
+      return "Escolha quatro seleções diferentes.";
+    }
+
+    return "";
   }
 
   async function saveGuess(game, guess) {
@@ -985,6 +1295,49 @@
 
     saveLocalState();
     return localGuess;
+  }
+
+  async function saveExtraGuess(extra) {
+    if (state.mode === "supabase") {
+      const { data, error } = await state.client
+        .from("palpites_extras")
+        .upsert({
+          participante_id: state.profile.id,
+          campeao_code: extra.championCode,
+          vice_code: extra.runnerUpCode,
+          semifinalista_3_code: extra.semifinalist3Code,
+          semifinalista_4_code: extra.semifinalist4Code
+        }, { onConflict: "participante_id" })
+        .select("id,participante_id,campeao_code,vice_code,semifinalista_3_code,semifinalista_4_code,updated_at")
+        .single();
+
+      if (error) {
+        throw error;
+      }
+
+      return mapExtraGuessRow(data, state.profile.name);
+    }
+
+    const localExtra = {
+      id: "local-extras",
+      participantId: "local",
+      participantName: state.profile.name || "Participante",
+      championCode: extra.championCode,
+      runnerUpCode: extra.runnerUpCode,
+      semifinalist3Code: extra.semifinalist3Code,
+      semifinalist4Code: extra.semifinalist4Code,
+      updatedAt: new Date().toISOString()
+    };
+
+    state.extraGuess = localExtra;
+    state.extraGuesses = [localExtra];
+    saveLocalState();
+    return localExtra;
+  }
+
+  function mergeExtraGuessIntoState(extra) {
+    state.extraGuesses = mergeExtraGuessRows([...state.extraGuesses, extra]);
+    state.extraGuess = state.extraGuesses.find((item) => item.participantId === extra.participantId) || extra;
   }
 
   async function saveResult(game, result) {
@@ -1040,6 +1393,93 @@
 
   function cutoffDate(value) {
     return new Date(new Date(value).getTime() - CUTOFF_MINUTES * 60 * 1000);
+  }
+
+  function getExtraResults() {
+    const semifinalists = new Set();
+    state.games
+      .filter((game) => isSemifinalGame(game) && getGameStatus(game) === "finalizado" && game.result)
+      .forEach((game) => {
+        semifinalists.add(game.teamA);
+        semifinalists.add(game.teamB);
+      });
+
+    const finalGame = state.games.find((game) => isFinalGame(game) && getGameStatus(game) === "finalizado" && game.result);
+    const champion = finalGame ? gameWinner(finalGame) : "";
+    const runnerUp = finalGame && champion ? gameLoser(finalGame, champion) : "";
+
+    return {
+      semifinalists,
+      champion,
+      runnerUp,
+      hasSemifinals: semifinalists.size >= 4,
+      hasFinal: Boolean(champion && runnerUp)
+    };
+  }
+
+  function calculateExtraScore(extra, results = getExtraResults()) {
+    let points = 0;
+
+    if (results.hasFinal) {
+      if (extra.championCode === results.champion) points += 20;
+      if (extra.runnerUpCode === results.runnerUp) points += 12;
+    }
+
+    if (results.hasSemifinals) {
+      extraSemifinalists(extra).forEach((code) => {
+        if (results.semifinalists.has(code)) points += 5;
+      });
+    }
+
+    return {
+      points,
+      available: results.hasSemifinals || results.hasFinal
+    };
+  }
+
+  function extraSemifinalists(extra) {
+    return [...new Set([
+      extra.championCode,
+      extra.runnerUpCode,
+      extra.semifinalist3Code,
+      extra.semifinalist4Code
+    ].filter(Boolean))];
+  }
+
+  function isSemifinalGame(game) {
+    const text = normalizeText(`${game.stage} ${game.round}`);
+    return text.includes("semifinal") || text.includes("semi final") || text.includes("semi-final");
+  }
+
+  function isFinalGame(game) {
+    if (isSemifinalGame(game)) return false;
+
+    const round = normalizeText(game.round || "");
+    const stage = normalizeText(game.stage || "");
+    const excluded = /(quartas|oitavas|terceiro|3o|3º|disputa)/;
+
+    if (round && !excluded.test(round)) {
+      return round === "final" || round === "grande final";
+    }
+
+    return !round && !excluded.test(stage) && (stage === "final" || stage === "grande final");
+  }
+
+  function gameWinner(game) {
+    if (game.result?.qualifiedCode && [game.teamA, game.teamB].includes(game.result.qualifiedCode)) {
+      return game.result.qualifiedCode;
+    }
+    if (!game.result) return "";
+    if (game.result.goalsA > game.result.goalsB) return game.teamA;
+    if (game.result.goalsB > game.result.goalsA) return game.teamB;
+    return "";
+  }
+
+  function gameLoser(game, winnerCode) {
+    if (!winnerCode) return "";
+    if (game.teamA === winnerCode) return game.teamB;
+    if (game.teamB === winnerCode) return game.teamA;
+    return "";
   }
 
   function calculateScore(game, guess) {
@@ -1210,6 +1650,14 @@
 
   function formatPoints(value) {
     return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  }
+
+  function normalizeText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
   }
 
   function escapeHtml(value) {

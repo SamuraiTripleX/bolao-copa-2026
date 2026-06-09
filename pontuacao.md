@@ -142,3 +142,40 @@ pontos finais = 14
 Atualmente nao existe bonus de classificado.
 
 O app nao pede mais para escolher quem passa de fase, e o calculo atual nao soma pontos por classificado.
+
+## Palpites extras de selecoes
+
+Cada participante tambem pode palpitar:
+
+- campeao;
+- vice-campeao;
+- outros 2 semifinalistas.
+
+O campeao e o vice ja contam como semifinalistas. Por isso, o app salva quatro selecoes no total:
+
+- campeao;
+- vice-campeao;
+- semifinalista 3;
+- semifinalista 4.
+
+Pontuacao:
+
+| Acerto | Pontos |
+| --- | ---: |
+| Campeao | 20 |
+| Vice-campeao | 12 |
+| Cada semifinalista | 5 |
+
+Se o participante acerta o campeao, recebe 20 pontos pelo campeao e mais 5 pontos porque o campeao tambem e semifinalista.
+
+Se o participante acerta o vice-campeao, recebe 12 pontos pelo vice e mais 5 pontos porque o vice tambem e semifinalista.
+
+Pontuacao maxima dos extras:
+
+```text
+20 campeao + 12 vice + 4 semifinalistas * 5 = 52 pontos
+```
+
+O app apura esses pontos a partir dos jogos cadastrados como `Semifinal` e `Final` quando eles estiverem com status `finalizado`.
+
+Quando as duas semifinais finalizadas ou a final finalizada ja permitem pontuar os extras, o app bloqueia novas edicoes desses palpites.

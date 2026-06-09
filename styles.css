@@ -158,6 +158,10 @@ button {
   max-width: 460px;
 }
 
+.extras-panel {
+  margin-bottom: 14px;
+}
+
 .panel-heading {
   display: flex;
   align-items: center;
@@ -372,6 +376,75 @@ select:disabled {
 .admin-list {
   display: grid;
   gap: 12px;
+}
+
+.extras-form {
+  display: grid;
+  gap: 14px;
+}
+
+.extras-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.extras-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.extra-chip {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.extra-chip img {
+  width: 32px;
+  height: 23px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.extra-chip strong,
+.extra-chip span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.extra-chip strong {
+  display: block;
+  font-size: 12px;
+}
+
+.extra-chip span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.extra-chip.is-empty {
+  grid-template-columns: minmax(0, 1fr);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.extras-rules {
+  overflow-x: auto;
 }
 
 .game-card {
@@ -981,6 +1054,10 @@ td:last-child {
   .rules-layout {
     grid-template-columns: 1fr;
   }
+
+  .extras-preview {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -992,7 +1069,9 @@ td:last-child {
   }
 
   .toolbar,
-  .side-panel {
+  .side-panel,
+  .extras-grid,
+  .extras-preview {
     display: grid;
     grid-template-columns: 1fr;
   }
