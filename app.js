@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "bolao-copa-2026:v1";
   const CUTOFF_MINUTES = 5;
+  const EXTRA_LOCK_AT = "2026-06-18T13:00:00-03:00";
   const fallbackCountries = [
     { code: "BRA", short_name: "Brasil" },
     { code: "FRA", short_name: "Franca" },
@@ -38,6 +39,8 @@
     fixtureSource: "exemplo",
     profile: { id: "", name: "", isAdmin: false },
     expandedGames: new Set(),
+    expandedRankings: new Set(),
+    expandedExtras: false,
     deadlineTimer: null,
     bootstrapped: false,
     filters: { phase: "todos", status: "todos" }
@@ -71,7 +74,8 @@
       "totalGames", "savedGuesses", "openGames", "finishedGames", "nextGame",
       "fixtureSource", "phaseFilter", "statusFilter", "gamesList",
       "rankingList", "adminTab", "adminGamesList", "extrasForm", "extraChampion",
-      "extraRunnerUp", "extraSemi3", "extraSemi4", "extrasPreview", "extrasStatus", "toast"
+      "extraRunnerUp", "extraSemi3", "extraSemi4", "extrasPreview", "extrasStatus",
+      "extrasVisibleList", "toast"
     ];
 
     ids.forEach((id) => {
@@ -97,8 +101,10 @@
 
     els.gamesList?.addEventListener("submit", handleGuessSubmit);
     els.gamesList?.addEventListener("click", handleGamesListClick);
+    els.rankingList?.addEventListener("click", handleRankingListClick);
     els.adminGamesList?.addEventListener("submit", handleResultSubmit);
     els.extrasForm?.addEventListener("submit", handleExtrasSubmit);
+    els.extrasVisibleList?.addEventListener("click", handleExtrasListClick);
     [els.extraChampion, els.extraRunnerUp, els.extraSemi3, els.extraSemi4].forEach((select) => {
       select?.addEventListener("change", renderExtras);
     });
@@ -160,7 +166,9 @@
       state.profile = saved.profile || state.profile;
       state.guesses = Array.isArray(saved.guesses) ? saved.guesses : [];
       state.extraGuess = saved.extraGuess || null;
-      state.extraGuesses = state.extraGuess ? [state.extraGuess] : [];
+      state.extraGuesses = Array.isArray(saved.extraGuesses)
+        ? saved.extraGuesses
+        : state.extraGuess ? [state.extraGuess] : [];
     } catch (_error) {
       state.profile = { id: "", name: "", isAdmin: false };
       state.guesses = [];
@@ -173,7 +181,8 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify({
       profile: state.profile,
       guesses: state.guesses,
-      extraGuess: state.extraGuess
+      extraGuess: state.extraGuess,
+      extraGuesses: state.extraGuesses
     }));
   }
 
@@ -445,7 +454,6 @@
       startsAt: game.inicio,
       teamA: game.time_a_code,
       teamB: game.time_b_code,
-      multiplier: Number(game.multiplicador || 1),
       knockout: Boolean(game.mata_mata),
       status: game.status || "aberto",
       result: Number.isInteger(game.gols_a) && Number.isInteger(game.gols_b)
@@ -463,7 +471,6 @@
       startsAt: game.inicio,
       teamA: game.time_a_code,
       teamB: game.time_b_code,
-      multiplier: Number(game.multiplicador || 1),
       knockout: Boolean(game.mata_mata),
       status: game.status,
       result: Number.isInteger(game.gols_a) && Number.isInteger(game.gols_b)
@@ -490,11 +497,13 @@
     }
 
     const now = Date.now();
-    const nextCutoff = state.games
+    const gameCutoffs = state.games
       .filter((game) => getGameStatus(game) === "aberto")
       .map((game) => cutoffDate(game.startsAt).getTime())
-      .filter((time) => Number.isFinite(time) && time > now)
-      .sort((a, b) => a - b)[0];
+      .filter((time) => Number.isFinite(time) && time > now);
+    const extraCutoff = extraCutoffDate().getTime();
+    const extraCutoffs = extrasEditable() && extraCutoff > now ? [extraCutoff] : [];
+    const nextCutoff = [...gameCutoffs, ...extraCutoffs].sort((a, b) => a - b)[0];
     const delay = nextCutoff
       ? Math.min(Math.max(nextCutoff - now + 1000, 1000), 60000)
       : 60000;
@@ -508,6 +517,7 @@
     }
 
     await loadGuesses({ silent: true });
+    await loadExtraGuesses({ silent: true });
     render();
     scheduleDeadlineWatcher();
   }
@@ -603,7 +613,6 @@
             <span>${escapeHtml(game.stage)}</span>
             <span>${escapeHtml(game.round)}</span>
             <time datetime="${escapeAttr(game.startsAt)}">${formatDateTime(game.startsAt)}</time>
-            <span>x${formatMultiplier(game.multiplier)}</span>
           </div>
           <div class="teams">
             ${renderTeam(game.teamA)}
@@ -682,13 +691,17 @@
     if (!canUseProfile()) {
       els.extrasStatus.textContent = "Entre com o convite para salvar seus extras.";
     } else if (!editable) {
-      els.extrasStatus.textContent = "Extras bloqueados: semifinal/final já liberou pontuação.";
+      els.extrasStatus.textContent = "Extras bloqueados. Palpites liberados.";
     } else if (state.extrasLoadError) {
       els.extrasStatus.textContent = "Extras precisam do SQL novo no Supabase.";
     } else if (state.extraGuess?.updatedAt) {
-      els.extrasStatus.textContent = `Salvo em ${formatDateTime(state.extraGuess.updatedAt)}.`;
+      els.extrasStatus.textContent = `Salvo em ${formatDateTime(state.extraGuess.updatedAt)}. Fecha ${formatDateTime(extraCutoffDate())}.`;
     } else {
-      els.extrasStatus.textContent = "Escolha quatro seleções diferentes.";
+      els.extrasStatus.textContent = `Escolha quatro seleções diferentes. Fecha ${formatDateTime(extraCutoffDate())}.`;
+    }
+
+    if (els.extrasVisibleList) {
+      els.extrasVisibleList.innerHTML = renderVisibleExtraGuesses();
     }
   }
 
@@ -742,8 +755,11 @@
   }
 
   function extrasEditable() {
-    const results = getExtraResults();
-    return !results.hasSemifinals && !results.hasFinal;
+    return new Date() < extraCutoffDate();
+  }
+
+  function extraCutoffDate() {
+    return cutoffDate(EXTRA_LOCK_AT);
   }
 
   function renderTeam(code) {
@@ -776,8 +792,8 @@
     }
 
     return `
-      <details class="visible-guesses">
-        <summary class="guesses-toggle" aria-controls="${escapeAttr(panelId)}">
+      <details class="visible-guesses" ${state.expandedGames.has(game.id) ? "open" : ""}>
+        <summary class="guesses-toggle" data-toggle-guesses="${escapeAttr(game.id)}" aria-controls="${escapeAttr(panelId)}">
           <span class="label-closed">Ver palpites (${guesses.length})</span>
           <span class="label-open">Ocultar palpites (${guesses.length})</span>
         </summary>
@@ -804,6 +820,59 @@
         </div>
       </details>
     `;
+  }
+
+  function renderVisibleExtraGuesses() {
+    if (extrasEditable()) {
+      return "";
+    }
+
+    const extras = state.extraGuesses
+      .filter((extra) => extra.championCode && extra.runnerUpCode)
+      .sort((a, b) => a.participantName.localeCompare(b.participantName, "pt-BR"));
+    const panelId = "extras-guesses-panel";
+
+    if (extras.length === 0) {
+      return `<div class="visible-guesses extras-guesses"><strong>Palpites extras</strong><span>Nenhum palpite extra salvo.</span></div>`;
+    }
+
+    const results = getExtraResults();
+
+    return `
+      <details class="visible-guesses extras-guesses" ${state.expandedExtras ? "open" : ""}>
+        <summary class="guesses-toggle" data-toggle-extras aria-controls="${panelId}">
+          <span class="label-closed">Ver extras (${extras.length})</span>
+          <span class="label-open">Ocultar extras (${extras.length})</span>
+        </summary>
+        <div id="${panelId}" class="guesses-panel">
+          <div class="extra-guess-row extra-guess-head">
+            <span>Participante</span>
+            <span>Campeão</span>
+            <span>Vice</span>
+            <span>Outros semis</span>
+            <span>Pontos</span>
+          </div>
+          ${extras.map((extra) => {
+            const score = calculateExtraScore(extra, results);
+            const points = score.available ? formatPoints(score.points) : "-";
+            return `
+              <div class="extra-guess-row">
+                <span class="guess-name">${escapeHtml(extra.participantName)}</span>
+                <span>${extraTeamPill(extra.championCode)}</span>
+                <span>${extraTeamPill(extra.runnerUpCode)}</span>
+                <span class="extra-semis">${[extra.semifinalist3Code, extra.semifinalist4Code].map(extraTeamPill).join("")}</span>
+                <span class="guess-points">${points}</span>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </details>
+    `;
+  }
+
+  function extraTeamPill(code) {
+    if (!code) return "-";
+    return `<span class="extra-team-pill">${renderScoreFlag(code)}${escapeHtml(teamName(code))}</span>`;
   }
 
   function cardNote(game, status) {
@@ -842,7 +911,9 @@
             <div class="card-subtitle">${rankingSubtitle(row, index, scores)}</div>
           </div>
           <div class="card-score">
-            <div class="card-score-value">${formatPoints(row.points)}</div>
+            <button class="ranking-score-button" type="button" data-ranking-toggle="${escapeAttr(row.participantId)}" aria-expanded="${state.expandedRankings.has(row.participantId) ? "true" : "false"}" aria-label="Ver detalhamento dos pontos de ${escapeAttr(row.name)}">
+              <span class="card-score-value">${formatPoints(row.points)}</span>
+            </button>
             <div class="card-score-label">pontos</div>
           </div>
         </div>
@@ -868,8 +939,38 @@
             <span class="stat-label">Extras</span>
           </div>
         </div>
+        ${renderRankingBreakdown(row)}
       </article>
     `).join("");
+  }
+
+  function renderRankingBreakdown(row) {
+    if (!state.expandedRankings.has(row.participantId)) {
+      return "";
+    }
+
+    const items = row.breakdown.filter((item) => item.points > 0);
+    if (items.length === 0) {
+      return `<div class="ranking-breakdown"><div class="ranking-breakdown-empty">Nenhum ponto detalhado.</div></div>`;
+    }
+
+    return `
+      <div class="ranking-breakdown">
+        <div class="ranking-breakdown-head">
+          <span>Detalhamento</span>
+          <span>Pontos</span>
+        </div>
+        ${items.map((item) => `
+          <div class="ranking-breakdown-row">
+            <div>
+              <strong>${escapeHtml(item.label)}</strong>
+              <span>${escapeHtml(item.reason)}</span>
+            </div>
+            <b>${formatPoints(item.points)}</b>
+          </div>
+        `).join("")}
+      </div>
+    `;
   }
 
   function rankMedal(index) {
@@ -968,6 +1069,13 @@
       row.exacts += score.exact ? 1 : 0;
       row.results += score.result ? 1 : 0;
       row.games += score.points > 0 ? 1 : 0;
+      if (score.points > 0) {
+        row.breakdown.push({
+          label: gameLabel(game),
+          points: score.points,
+          reason: score.reason
+        });
+      }
       rows.set(userKey, row);
     });
 
@@ -982,6 +1090,7 @@
       const row = rankingRow(rows, userKey, extra.participantName || state.profile.name || "Participante");
       row.points += score.points;
       row.extras += score.points;
+      row.breakdown.push(...score.breakdown);
       rows.set(userKey, row);
     });
 
@@ -1000,7 +1109,8 @@
       exacts: 0,
       results: 0,
       games: 0,
-      extras: 0
+      extras: 0,
+      breakdown: []
     };
   }
 
@@ -1095,6 +1205,33 @@
       state.expandedGames.add(gameId);
     }
     renderGames();
+  }
+
+  function handleExtrasListClick(event) {
+    const toggle = event.target.closest("[data-toggle-extras]");
+    if (!toggle) {
+      return;
+    }
+
+    event.preventDefault();
+    state.expandedExtras = !state.expandedExtras;
+    renderExtras();
+  }
+
+  function handleRankingListClick(event) {
+    const toggle = event.target.closest("[data-ranking-toggle]");
+    if (!toggle) {
+      return;
+    }
+
+    event.preventDefault();
+    const participantId = toggle.dataset.rankingToggle;
+    if (state.expandedRankings.has(participantId)) {
+      state.expandedRankings.delete(participantId);
+    } else {
+      state.expandedRankings.add(participantId);
+    }
+    renderRanking();
   }
 
   async function handleGuessSubmit(event) {
@@ -1419,21 +1556,44 @@
 
   function calculateExtraScore(extra, results = getExtraResults()) {
     let points = 0;
+    const breakdown = [];
 
     if (results.hasFinal) {
-      if (extra.championCode === results.champion) points += 20;
-      if (extra.runnerUpCode === results.runnerUp) points += 12;
+      if (extra.championCode === results.champion) {
+        points += 20;
+        breakdown.push({
+          label: "Extra: campeão",
+          points: 20,
+          reason: `Acertou ${teamName(results.champion)} campeão.`
+        });
+      }
+      if (extra.runnerUpCode === results.runnerUp) {
+        points += 12;
+        breakdown.push({
+          label: "Extra: vice-campeão",
+          points: 12,
+          reason: `Acertou ${teamName(results.runnerUp)} vice-campeão.`
+        });
+      }
     }
 
     if (results.hasSemifinals) {
       extraSemifinalists(extra).forEach((code) => {
-        if (results.semifinalists.has(code)) points += 5;
+        if (results.semifinalists.has(code)) {
+          points += 5;
+          breakdown.push({
+            label: "Extra: semifinalista",
+            points: 5,
+            reason: `Acertou ${teamName(code)} entre os semifinalistas.`
+          });
+        }
       });
     }
 
     return {
       points,
-      available: results.hasSemifinals || results.hasFinal
+      available: results.hasSemifinals || results.hasFinal,
+      breakdown
     };
   }
 
@@ -1482,6 +1642,11 @@
     return "";
   }
 
+  function gameLabel(game) {
+    const result = game.result ? ` (${game.result.goalsA} x ${game.result.goalsB})` : "";
+    return `${teamName(game.teamA)} x ${teamName(game.teamB)}${result}`;
+  }
+
   function calculateScore(game, guess) {
     const realA = game.result.goalsA;
     const realB = game.result.goalsB;
@@ -1508,8 +1673,7 @@
     }
 
     const rarity = exact ? getExoticBonus(guessA, guessB) : 0;
-    const multiplier = Number(game.multiplier || 1);
-    const points = Math.floor((base + rarity) * multiplier);
+    const points = base + rarity;
     const reason = scoreReason(game, {
       realA,
       realB,
@@ -1522,49 +1686,44 @@
       oneTeamGoals,
       totalGoals,
       base,
-      rarity,
-      multiplier
+      rarity
     }, points);
 
     return { points, exact, result, totalGoals, reason };
   }
 
   function scoreReason(game, score, points) {
-    const multiplierNote = score.multiplier === 1
-      ? ""
-      : ` Multiplicador ${formatMultiplier(score.multiplier)} aplicado: ${formatPoints(points)} pts.`;
-
     if (score.exact) {
       const rarityNote = score.rarity > 0 ? ` + ${score.rarity} de bônus por placar raro` : "";
-      return `Placar exato: 10 pontos${rarityNote}.${multiplierNote}`;
+      return `Placar exato: 10 pontos${rarityNote}.`;
     }
 
     if (score.result && score.realResult === "D") {
-      return `Acertou o empate. Empate não exato vale 5 pontos.${multiplierNote}`;
+      return `Acertou o empate. Empate não exato vale 5 pontos.`;
     }
 
     if (score.result && score.sameDiff) {
-      return `Acertou o vencedor e o saldo de gols. Base: 6 pontos.${multiplierNote}`;
+      return `Acertou o vencedor e o saldo de gols. Base: 6 pontos.`;
     }
 
     if (score.result && score.oneTeamGoals) {
-      return `Acertou o vencedor e o número de gols ${matchedTeamGoalsText(game, score)}. Base: 5 pontos.${multiplierNote}`;
+      return `Acertou o vencedor e o número de gols ${matchedTeamGoalsText(game, score)}. Base: 5 pontos.`;
     }
 
     if (score.result && score.totalGoals) {
-      return `Acertou o vencedor e o total de gols da partida (${score.realA + score.realB}). Base: 5 pontos.${multiplierNote}`;
+      return `Acertou o vencedor e o total de gols da partida (${score.realA + score.realB}). Base: 5 pontos.`;
     }
 
     if (score.result) {
-      return `Acertou o vencedor. Base: 4 pontos.${multiplierNote}`;
+      return `Acertou o vencedor. Base: 4 pontos.`;
     }
 
     if (score.oneTeamGoals) {
-      return `Acertou o número de gols ${matchedTeamGoalsText(game, score)}. Base: 1 ponto.${multiplierNote}`;
+      return `Acertou o número de gols ${matchedTeamGoalsText(game, score)}. Base: 1 ponto.`;
     }
 
     if (score.totalGoals) {
-      return `Acertou o total de gols da partida (${score.realA + score.realB}). Base: 1 ponto.${multiplierNote}`;
+      return `Acertou o total de gols da partida (${score.realA + score.realB}). Base: 1 ponto.`;
     }
 
     return `Não acertou vencedor, empate, gols de time nem total de gols.`;
@@ -1642,10 +1801,6 @@
       dateStyle: "short",
       timeStyle: "short"
     }).format(new Date(value));
-  }
-
-  function formatMultiplier(value) {
-    return Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
   }
 
   function formatPoints(value) {

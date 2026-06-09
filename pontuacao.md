@@ -6,6 +6,8 @@ Este documento descreve a pontuacao como ela esta implementada atualmente no app
 
 Para cada jogo finalizado, o app compara o placar real com o palpite do participante.
 
+Todos os jogos usam a mesma pontuacao. Nao existe multiplicador por fase.
+
 Ordem atual de avaliacao:
 
 | Situacao | Pontos base |
@@ -118,25 +120,6 @@ Tabela atual de bonus:
 | 4 x 3, 6 x 0, 5 x 2, 6 x 1, 7 x 0, 4 x 4, 5 x 3, 6 x 2, 7 x 1, 8 x 0, 9 x 0, 8 x 1, 5 x 4, 7 x 2, 6 x 3 | 5 |
 | Qualquer outro placar exato nao listado | 5 |
 
-## Multiplicador por fase
-
-Depois de calcular os pontos base e o bonus de placar exato raro, o app aplica o multiplicador do jogo.
-
-Formula atual:
-
-```text
-pontos finais = piso((pontos base + bonus raro) * multiplicador)
-```
-
-O app usa `Math.floor`, ou seja, arredonda para baixo.
-
-Exemplo com multiplicador 1.2:
-
-```text
-(10 + 2) * 1.2 = 14.4
-pontos finais = 14
-```
-
 ## Pontuacao de classificado no mata-mata
 
 Atualmente nao existe bonus de classificado.
@@ -178,4 +161,6 @@ Pontuacao maxima dos extras:
 
 O app apura esses pontos a partir dos jogos cadastrados como `Semifinal` e `Final` quando eles estiverem com status `finalizado`.
 
-Quando as duas semifinais finalizadas ou a final finalizada ja permitem pontuar os extras, o app bloqueia novas edicoes desses palpites.
+Os palpites extras fecham em 18/06/2026 as 12:55, cinco minutos antes do primeiro jogo da segunda rodada, marcado para 18/06/2026 as 13:00.
+
+Depois desse horario, os palpites extras dos outros participantes ficam visiveis e novas edicoes ficam bloqueadas.
