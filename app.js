@@ -1029,22 +1029,30 @@
     const realB = game.result.goalsB;
     const guessA = guess.goalsA;
     const guessB = guess.goalsB;
+    const realResult = resultType(realA, realB);
+    const guessResult = resultType(guessA, guessB);
     const exact = realA === guessA && realB === guessB;
-    const result = resultType(realA, realB) === resultType(guessA, guessB);
+    const result = realResult === guessResult;
     const sameDiff = realA - realB === guessA - guessB;
     const oneTeamGoals = realA === guessA || realB === guessB;
+    const totalGoals = realA + realB === guessA + guessB;
 
     let base = 0;
     if (exact) base = 10;
-    else if (result && sameDiff) base = 7;
-    else if (result && oneTeamGoals) base = 6;
+    else if (result && realResult === "D") base = 5;
+    else if (result && sameDiff) base = 6;
+    else if (result && oneTeamGoals) base = 5;
     else if (result) base = 4;
-    else if (oneTeamGoals) base = 1;
+    else if (totalGoals) base = 1;
+
+    if (!exact && result && realResult !== "D" && totalGoals && base === 4) {
+      base += 1;
+    }
 
     const rarity = exact ? getExoticBonus(guessA, guessB) : 0;
     const points = Math.floor((base + rarity) * game.multiplier);
 
-    return { points, exact, result };
+    return { points, exact, result, totalGoals };
   }
 
   function resultType(a, b) {
