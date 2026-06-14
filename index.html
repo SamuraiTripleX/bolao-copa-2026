@@ -4,10 +4,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Bolão Copa 2026</title>
-    <link rel="stylesheet" href="styles.css?v=2026-001">
+    <link rel="stylesheet" href="styles.css?v=2026-003">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-    <script src="supabase-config.js?v=2026-001" defer></script>
-    <script src="app.js?v=2026-001" defer></script>
+    <script src="supabase-config.js?v=2026-003" defer></script>
+    <script src="app.js?v=2026-003" defer></script>
   </head>
   <body>
     <header class="topbar">
@@ -16,7 +16,7 @@
         <div>
           <h1>Bolão Copa 2026</h1>
           <p id="connectionStatus">Carregando...</p>
-          <p class="app-version">Versão 2026-001</p>
+          <p class="app-version">Versão 2026-003</p>
         </div>
       </div>
 
@@ -174,6 +174,13 @@
             <div>
               <h2 id="adminTitle">Resultados</h2>
               <p>Lance ou corrija placares finais dos jogos.</p>
+            </div>
+            <div class="toolbar">
+              <select id="adminResultFilter" aria-label="Filtrar resultados">
+                <option value="nao-informados">Não informados</option>
+                <option value="informados">Informados</option>
+                <option value="todos">Todos</option>
+              </select>
             </div>
           </div>
           <div id="adminGamesList" class="admin-list"></div>

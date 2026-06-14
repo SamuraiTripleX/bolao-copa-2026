@@ -44,7 +44,7 @@
     activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
-    filters: { phase: "todos", status: "todos" }
+    filters: { phase: "todos", status: "todos", adminResults: "nao-informados" }
   };
 
   const els = {};
@@ -75,7 +75,7 @@
       "connectionStatus", "loginTab", "authForm", "authName", "authInvite", "signOutButton",
       "totalGames", "savedGuesses", "openGames", "finishedGames", "nextGame",
       "fixtureSource", "phaseFilter", "statusFilter", "gamesList",
-      "rankingList", "adminTab", "adminGamesList", "extrasForm", "extraChampion",
+      "rankingList", "adminTab", "adminGamesList", "adminResultFilter", "extrasForm", "extraChampion",
       "extraRunnerUp", "extraSemi3", "extraSemi4", "extrasPreview", "extrasStatus",
       "extrasVisibleList", "toast"
     ];
@@ -99,6 +99,10 @@
     els.statusFilter?.addEventListener("change", () => {
       state.filters.status = els.statusFilter.value;
       renderGames();
+    });
+    els.adminResultFilter?.addEventListener("change", () => {
+      state.filters.adminResults = els.adminResultFilter.value;
+      renderAdmin();
     });
 
     els.gamesList?.addEventListener("submit", handleGuessSubmit);
@@ -1080,16 +1084,50 @@
       return;
     }
 
+    const filteredGames = adminFilteredGames();
+
     if (state.games.length === 0) {
       els.adminGamesList.innerHTML = `<div class="empty-state">Nenhum jogo cadastrado.</div>`;
       return;
     }
 
-    els.adminGamesList.innerHTML = state.games
+    if (filteredGames.length === 0) {
+      els.adminGamesList.innerHTML = `<div class="empty-state">${adminEmptyMessage()}</div>`;
+      return;
+    }
+
+    els.adminGamesList.innerHTML = filteredGames
       .slice()
       .sort((a, b) => new Date(a.startsAt) - new Date(b.startsAt))
       .map(renderAdminGameCard)
       .join("");
+  }
+
+  function adminFilteredGames() {
+    const filter = els.adminResultFilter?.value || state.filters.adminResults || "nao-informados";
+    state.filters.adminResults = filter;
+
+    if (filter === "informados") {
+      return state.games.filter((game) => Boolean(game.result));
+    }
+
+    if (filter === "todos") {
+      return state.games;
+    }
+
+    return state.games.filter((game) => !game.result);
+  }
+
+  function adminEmptyMessage() {
+    if (state.filters.adminResults === "informados") {
+      return "Nenhum resultado informado ainda.";
+    }
+
+    if (state.filters.adminResults === "todos") {
+      return "Nenhum jogo neste filtro.";
+    }
+
+    return "Todos os resultados já foram informados.";
   }
 
   function renderAdminGameCard(game) {
@@ -1111,15 +1149,17 @@
           </div>
         </div>
         <form class="admin-form">
-          <div class="score-grid">
-            <label class="field">
-              <span>${escapeHtml(teamName(game.teamA))}</span>
-              <input class="score-input" name="goalsA" type="number" inputmode="numeric" min="0" max="20" value="${result.goalsA ?? ""}">
+          <div class="score-grid guess-score-grid">
+            <label class="score-field score-field-left">
+              <span class="sr-only">Resultado ${escapeHtml(teamName(game.teamA))}</span>
+              ${renderScoreFlag(game.teamA)}
+              <input class="score-input" name="goalsA" type="number" inputmode="numeric" min="0" max="20" aria-label="Resultado ${escapeAttr(teamName(game.teamA))}" value="${result.goalsA ?? ""}">
             </label>
             <div class="score-separator">x</div>
-            <label class="field">
-              <span>${escapeHtml(teamName(game.teamB))}</span>
-              <input class="score-input" name="goalsB" type="number" inputmode="numeric" min="0" max="20" value="${result.goalsB ?? ""}">
+            <label class="score-field score-field-right">
+              <span class="sr-only">Resultado ${escapeHtml(teamName(game.teamB))}</span>
+              <input class="score-input" name="goalsB" type="number" inputmode="numeric" min="0" max="20" aria-label="Resultado ${escapeAttr(teamName(game.teamB))}" value="${result.goalsB ?? ""}">
+              ${renderScoreFlag(game.teamB)}
             </label>
           </div>
           <div class="card-actions">
