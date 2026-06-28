@@ -24,6 +24,7 @@
     ["7 x 1", 5], ["8 x 0", 5], ["9 x 0", 5], ["8 x 1", 5],
     ["5 x 4", 5], ["7 x 2", 5], ["6 x 3", 5]
   ]);
+  const phaseOrder = ["Fase de grupos", "16 avos"];
 
   const state = {
     mode: "local",
@@ -44,7 +45,7 @@
     activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
-    filters: { phase: "todos", status: "todos", adminResults: "nao-informados" }
+    filters: { phase: "16 avos", status: "todos", adminResults: "nao-informados" }
   };
 
   const els = {};
@@ -584,8 +585,12 @@
   }
 
   function renderPhaseFilter() {
-    const current = els.phaseFilter.value || "todos";
-    const phases = [...new Set(state.games.map((game) => game.stage).filter(Boolean))];
+    const current = state.filters.phase || els.phaseFilter.value || "16 avos";
+    const gamePhases = [...new Set(state.games.map((game) => game.stage).filter(Boolean))];
+    const phases = [
+      ...phaseOrder,
+      ...gamePhases.filter((phase) => !phaseOrder.includes(phase))
+    ];
     els.phaseFilter.innerHTML = [
       `<option value="todos">Todas as fases</option>`,
       ...phases.map((phase) => `<option value="${escapeAttr(phase)}">${escapeHtml(phase)}</option>`)
