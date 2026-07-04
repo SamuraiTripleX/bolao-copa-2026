@@ -24,7 +24,7 @@
     ["7 x 1", 5], ["8 x 0", 5], ["9 x 0", 5], ["8 x 1", 5],
     ["5 x 4", 5], ["7 x 2", 5], ["6 x 3", 5]
   ]);
-  const phaseOrder = ["Fase de grupos", "16 avos"];
+  const phaseOrder = ["Fase de grupos", "16 avos", "Oitavas de Final"];
 
   const state = {
     mode: "local",
@@ -45,7 +45,7 @@
     activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
-    filters: { phase: "16 avos", status: "todos", adminResults: "nao-informados" }
+    filters: { phase: "Oitavas de Final", status: "aberto", adminResults: "nao-informados" }
   };
 
   const els = {};
@@ -519,6 +519,7 @@
   function render() {
     renderSession();
     renderPhaseFilter();
+    renderStatusFilter();
     renderSummary();
     renderGames();
     renderExtras();
@@ -585,7 +586,7 @@
   }
 
   function renderPhaseFilter() {
-    const current = state.filters.phase || els.phaseFilter.value || "16 avos";
+    const current = state.filters.phase || els.phaseFilter.value || "Oitavas de Final";
     const gamePhases = [...new Set(state.games.map((game) => game.stage).filter(Boolean))];
     const phases = [
       ...phaseOrder,
@@ -597,6 +598,11 @@
     ].join("");
     els.phaseFilter.value = phases.includes(current) ? current : "todos";
     state.filters.phase = els.phaseFilter.value;
+  }
+
+  function renderStatusFilter() {
+    if (!els.statusFilter) return;
+    els.statusFilter.value = state.filters.status || "aberto";
   }
 
   function renderSummary() {
