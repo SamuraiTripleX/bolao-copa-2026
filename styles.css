@@ -594,6 +594,29 @@ button.extra-chip[aria-expanded="true"] {
   padding: 8px 10px;
   outline: 0;
 }
+.admin-progress-field {
+  display: grid;
+  gap: 6px;
+  max-width: 300px;
+  margin-left: auto;
+}
+
+.admin-progress-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.admin-progress-field select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  padding: 8px 10px;
+  outline: 0;
+}
 
 .score-grid {
   display: grid;

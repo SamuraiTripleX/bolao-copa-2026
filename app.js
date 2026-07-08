@@ -24,7 +24,7 @@
     ["7 x 1", 5], ["8 x 0", 5], ["9 x 0", 5], ["8 x 1", 5],
     ["5 x 4", 5], ["7 x 2", 5], ["6 x 3", 5]
   ]);
-  const phaseOrder = ["Fase de grupos", "16 avos", "Oitavas de Final"];
+  const phaseOrder = ["Fase de grupos", "16 avos", "Oitavas de Final", "Quartas de Final"];
 
   const state = {
     mode: "local",
@@ -45,7 +45,7 @@
     activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
-    filters: { phase: "Oitavas de Final", status: "aberto", adminResults: "nao-informados" }
+    filters: { phase: "Quartas de Final", status: "aberto", adminResults: "nao-informados" }
   };
 
   const els = {};
@@ -586,7 +586,7 @@
   }
 
   function renderPhaseFilter() {
-    const current = state.filters.phase || els.phaseFilter.value || "Oitavas de Final";
+    const current = state.filters.phase || els.phaseFilter.value || "Quartas de Final";
     const gamePhases = [...new Set(state.games.map((game) => game.stage).filter(Boolean))];
     const phases = [
       ...phaseOrder,
@@ -1144,6 +1144,7 @@
   function renderAdminGameCard(game) {
     const status = getGameStatus(game);
     const result = game.result || {};
+    const qualifiedControl = renderAdminQualifiedControl(game);
 
     return `
       <article class="game-card" data-admin-game-id="${escapeAttr(game.id)}">
@@ -1173,6 +1174,7 @@
               ${renderScoreFlag(game.teamB)}
             </label>
           </div>
+          ${qualifiedControl}
           <div class="card-actions">
             <div class="game-note">Salvar libera os palpites deste jogo.</div>
             <button class="button button-primary" type="submit">${game.result ? "Corrigir resultado" : "Finalizar jogo"}</button>
@@ -1180,6 +1182,34 @@
         </form>
       </article>
     `;
+  }
+  function renderAdminQualifiedControl(game) {
+    const label = adminQualifiedLabel(game);
+    if (!label) return "";
+
+    const result = game.result || {};
+    const selected = result.qualifiedCode || scoreWinnerCode(game, result.goalsA, result.goalsB);
+    const options = [
+      `<option value="">Definir depois</option>`,
+      `<option value="${escapeAttr(game.teamA)}" ${selected === game.teamA ? "selected" : ""}>${escapeHtml(teamName(game.teamA))}</option>`,
+      `<option value="${escapeAttr(game.teamB)}" ${selected === game.teamB ? "selected" : ""}>${escapeHtml(teamName(game.teamB))}</option>`
+    ].join("");
+
+    return `
+      <label class="admin-progress-field">
+        <span>${escapeHtml(label)}</span>
+        <select name="qualifiedCode" aria-label="${escapeAttr(label)}">
+          ${options}
+        </select>
+      </label>
+    `;
+  }
+
+  function adminQualifiedLabel(game) {
+    if (isQuarterfinalGame(game)) return "Semifinalista";
+    if (isSemifinalGame(game)) return "Finalista";
+    if (isFinalGame(game)) return "Campe\u00e3o";
+    return "";
   }
 
   function calculateRanking() {
@@ -1441,11 +1471,28 @@
       return;
     }
 
+    const qualifiedLabel = adminQualifiedLabel(game);
+    const needsQualified = Boolean(qualifiedLabel);
+    let qualifiedCode = needsQualified ? String(formData.get("qualifiedCode") || "") : "";
+    if (qualifiedCode && ![game.teamA, game.teamB].includes(qualifiedCode)) {
+      showToast("Seleção classificada inválida.");
+      return;
+    }
+
+    if (needsQualified && !qualifiedCode) {
+      qualifiedCode = scoreWinnerCode(game, goalsA, goalsB);
+    }
+
+    if (needsQualified && !qualifiedCode) {
+      showToast(`Informe o ${qualifiedLabel.toLowerCase()}.`);
+      return;
+    }
+
     const button = form.querySelector("button[type='submit']");
     button.disabled = true;
 
     try {
-      await saveResult(game, { goalsA, goalsB });
+      await saveResult(game, { goalsA, goalsB, qualifiedCode });
       await loadGames();
       await loadGuesses();
       await loadExtraStatus();
@@ -1625,7 +1672,7 @@
       status: "finalizado",
       gols_a: result.goalsA,
       gols_b: result.goalsB,
-      classificado_code: null
+      classificado_code: result.qualifiedCode || null
     };
 
     const { error } = await state.client
@@ -1672,11 +1719,19 @@
 
   function getExtraResults() {
     const semifinalists = new Set();
+
     state.games
-      .filter((game) => isSemifinalGame(game) && getGameStatus(game) === "finalizado" && game.result)
+      .filter((game) => isQuarterfinalGame(game) && getGameStatus(game) === "finalizado" && game.result)
       .forEach((game) => {
-        semifinalists.add(game.teamA);
-        semifinalists.add(game.teamB);
+        const winner = gameWinner(game);
+        if (winner) semifinalists.add(winner);
+      });
+
+    state.games
+      .filter(isSemifinalGame)
+      .forEach((game) => {
+        if (game.teamA) semifinalists.add(game.teamA);
+        if (game.teamB) semifinalists.add(game.teamB);
       });
 
     const finalGame = state.games.find((game) => isFinalGame(game) && getGameStatus(game) === "finalizado" && game.result);
@@ -1744,6 +1799,10 @@
     ].filter(Boolean))];
   }
 
+  function isQuarterfinalGame(game) {
+    const text = normalizeText(`${game.stage} ${game.round}`);
+    return text.includes("quartas") || text.includes("quarta de final") || text.includes("quarterfinal");
+  }
   function isSemifinalGame(game) {
     const text = normalizeText(`${game.stage} ${game.round}`);
     return text.includes("semifinal") || text.includes("semi final") || text.includes("semi-final");
@@ -1763,6 +1822,12 @@
     return !round && !excluded.test(stage) && (stage === "final" || stage === "grande final");
   }
 
+  function scoreWinnerCode(game, goalsA, goalsB) {
+    if (!Number.isInteger(goalsA) || !Number.isInteger(goalsB)) return "";
+    if (goalsA > goalsB) return game.teamA;
+    if (goalsB > goalsA) return game.teamB;
+    return "";
+  }
   function gameWinner(game) {
     if (game.result?.qualifiedCode && [game.teamA, game.teamB].includes(game.result.qualifiedCode)) {
       return game.result.qualifiedCode;
