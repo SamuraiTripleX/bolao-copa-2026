@@ -24,7 +24,7 @@
     ["7 x 1", 5], ["8 x 0", 5], ["9 x 0", 5], ["8 x 1", 5],
     ["5 x 4", 5], ["7 x 2", 5], ["6 x 3", 5]
   ]);
-  const phaseOrder = ["Fase de grupos", "16 avos", "Oitavas de Final", "Quartas de Final", "Semifinal"];
+  const phaseOrder = ["Fase de grupos", "16 avos", "Oitavas de Final", "Quartas de Final", "Semifinal", "Final"];
 
   const state = {
     mode: "local",
@@ -45,7 +45,7 @@
     activeExtraReveal: "",
     deadlineTimer: null,
     bootstrapped: false,
-    filters: { phase: "Semifinal", status: "aberto", adminResults: "nao-informados" }
+    filters: { phase: "Final", status: "aberto", adminResults: "nao-informados" }
   };
 
   const els = {};
@@ -586,7 +586,7 @@
   }
 
   function renderPhaseFilter() {
-    const current = state.filters.phase || els.phaseFilter.value || "Semifinal";
+    const current = state.filters.phase || els.phaseFilter.value || "Final";
     const gamePhases = [...new Set(state.games.map((game) => game.stage).filter(Boolean))];
     const phases = [
       ...phaseOrder,
